@@ -11,11 +11,47 @@
             background-color: #f4f6f9;
             padding: 40px;
             margin: 0;
+            opacity: 0;
+            animation: fadeIn 0.8s ease forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
         }
         h1 {
             font-size: 2rem;
             color: #2c3e50;
             text-align: center;
+            position: relative;
+            animation: slideDown 1s ease forwards;
+            opacity: 0;
+            animation-delay: 0.3s;
+        }
+        @keyframes slideDown {
+            from { 
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        h1::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 3px;
+            background-color: #3498db;
+            animation: expandLine 1s ease forwards;
+            animation-delay: 1s;
+        }
+        @keyframes expandLine {
+            from { width: 0; }
+            to { width: 100px; }
         }
         .container {
             max-width: 800px;
@@ -24,6 +60,20 @@
             border-radius: 10px;
             padding: 30px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(20px);
+            opacity: 0;
+            animation: slideUp 0.8s ease forwards;
+            animation-delay: 0.5s;
+        }
+        @keyframes slideUp {
+            from { 
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         #file-input {
             font-size: 1rem;
@@ -36,10 +86,14 @@
             color: white;
             border: none;
             border-radius: 5px;
-            transition: background-color 0.3s ease;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
         }
         #file-input:hover {
             background-color: #2980b9;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
         }
         #subtitle-container {
             margin-top: 20px;
@@ -50,6 +104,21 @@
             max-height: 300px;
             overflow-y: auto;
             line-height: 1.6;
+            transition: all 0.3s ease;
+            transform-origin: top;
+        }
+        #subtitle-container.active {
+            animation: expandContainer 0.5s ease forwards;
+        }
+        @keyframes expandContainer {
+            from { 
+                transform: scaleY(0.8);
+                opacity: 0.8;
+            }
+            to { 
+                transform: scaleY(1);
+                opacity: 1;
+            }
         }
         #copy-btn {
             margin-top: 20px;
@@ -62,10 +131,60 @@
             border-radius: 5px;
             font-size: 1rem;
             cursor: pointer;
-            transition: background-color 0.3s ease;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+            transform: translateY(10px);
+            opacity: 0;
+        }
+        #copy-btn.active {
+            animation: fadeInUp 0.5s ease forwards;
+        }
+        @keyframes fadeInUp {
+            from { 
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to { 
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
         #copy-btn:hover {
             background-color: #2ecc71;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(39, 174, 96, 0.4);
+        }
+        #copy-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.2);
+            transition: all 0.4s ease;
+        }
+        #copy-btn:hover::before {
+            left: 100%;
+        }
+        .back-btn {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #7f8c8d;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            transition: all 0.3s ease;
+            opacity: 0;
+            animation: fadeIn 0.8s ease forwards;
+            animation-delay: 1s;
+        }
+        .back-btn:hover {
+            background-color: #95a5a6;
+            transform: translateY(-3px);
+            box-shadow: 0 5px 15px rgba(127, 140, 141, 0.4);
         }
     </style>
 </head>
@@ -76,6 +195,10 @@
         <input type="file" id="file-input" accept=".ass">
         <div id="subtitle-container"></div>
         <button id="copy-btn" style="display:none;">Copy Subtitles</button>
+    </div>
+    
+    <div style="text-align: center;">
+        <a href="index.html" class="back-btn">Back to Tools</a>
     </div>
 
     <script>
@@ -122,11 +245,19 @@
         function displaySubtitles(subtitles) {
             const container = document.getElementById('subtitle-container');
             const copyButton = document.getElementById('copy-btn');
+            
             container.textContent = subtitles.join('\n');
+            container.classList.add('active');
+            
             copyButton.style.display = 'block';
+            copyButton.classList.add('active');
+            
             copyButton.onclick = function() {
                 navigator.clipboard.writeText(container.textContent).then(() => {
-                    alert('Subtitles copied to clipboard!');
+                    copyButton.textContent = 'Copied!';
+                    setTimeout(() => {
+                        copyButton.textContent = 'Copy Subtitles';
+                    }, 2000);
                 });
             };
         }
