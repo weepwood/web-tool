@@ -4,18 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ASS Subtitle Converter</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
     <style>
         body {
-            font-family: 'Poppins', sans-serif;
+            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
             background-color: #f4f6f9;
             padding: 40px;
             margin: 0;
             opacity: 0;
-            animation: fadeIn 0.8s ease forwards;
+            animation: fadeIn 0.6s ease forwards;
         }
         @keyframes fadeIn {
-            from { opacity: 0; }
             to { opacity: 1; }
         }
         h1 {
@@ -23,18 +22,17 @@
             color: #2c3e50;
             text-align: center;
             position: relative;
-            animation: slideDown 1s ease forwards;
             opacity: 0;
-            animation-delay: 0.3s;
+            animation: slideDown 0.8s ease forwards 0.3s;
         }
         @keyframes slideDown {
-            from { 
-                opacity: 0;
-                transform: translateY(-20px);
-            }
             to { 
                 opacity: 1;
                 transform: translateY(0);
+            }
+            from { 
+                opacity: 0;
+                transform: translateY(-20px);
             }
         }
         h1::after {
@@ -46,11 +44,9 @@
             width: 0;
             height: 3px;
             background-color: #3498db;
-            animation: expandLine 1s ease forwards;
-            animation-delay: 1s;
+            animation: expandLine 0.8s ease forwards 1s;
         }
         @keyframes expandLine {
-            from { width: 0; }
             to { width: 100px; }
         }
         .container {
@@ -62,17 +58,17 @@
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             transform: translateY(20px);
             opacity: 0;
-            animation: slideUp 0.8s ease forwards;
-            animation-delay: 0.5s;
+            animation: slideUp 0.6s ease forwards 0.5s;
+            will-change: transform, opacity;
         }
         @keyframes slideUp {
-            from { 
-                opacity: 0;
-                transform: translateY(20px);
-            }
             to { 
                 opacity: 1;
                 transform: translateY(0);
+            }
+            from { 
+                opacity: 0;
+                transform: translateY(20px);
             }
         }
         #file-input {
@@ -86,7 +82,7 @@
             color: white;
             border: none;
             border-radius: 5px;
-            transition: all 0.3s ease;
+            transition: transform 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease;
             position: relative;
             overflow: hidden;
         }
@@ -104,8 +100,9 @@
             max-height: 300px;
             overflow-y: auto;
             line-height: 1.6;
-            transition: all 0.3s ease;
+            transition: transform 0.3s ease, opacity 0.3s ease;
             transform-origin: top;
+            will-change: transform;
         }
         #subtitle-container.active {
             animation: expandContainer 0.5s ease forwards;
@@ -131,11 +128,12 @@
             border-radius: 5px;
             font-size: 1rem;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: transform 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease;
             position: relative;
             overflow: hidden;
             transform: translateY(10px);
             opacity: 0;
+            will-change: transform, opacity;
         }
         #copy-btn.active {
             animation: fadeInUp 0.5s ease forwards;
@@ -163,10 +161,11 @@
             width: 100%;
             height: 100%;
             background: rgba(255, 255, 255, 0.2);
-            transition: all 0.4s ease;
+            transition: transform 0.4s ease;
+            transform: translateX(-100%);
         }
         #copy-btn:hover::before {
-            left: 100%;
+            transform: translateX(100%);
         }
         .back-btn {
             display: inline-block;
@@ -176,15 +175,22 @@
             color: white;
             text-decoration: none;
             border-radius: 5px;
-            transition: all 0.3s ease;
+            transition: transform 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease;
             opacity: 0;
-            animation: fadeIn 0.8s ease forwards;
-            animation-delay: 1s;
+            animation: fadeIn 0.6s ease forwards 1s;
         }
         .back-btn:hover {
             background-color: #95a5a6;
             transform: translateY(-3px);
             box-shadow: 0 5px 15px rgba(127, 140, 141, 0.4);
+        }
+        @media (max-width: 768px) {
+            body {
+                padding: 20px;
+            }
+            .container {
+                padding: 20px;
+            }
         }
     </style>
 </head>
@@ -202,28 +208,35 @@
     </div>
 
     <script>
-        document.getElementById('file-input').addEventListener('change', function(event) {
-            const file = event.target.files[0];
-            if (file && file.name.endsWith('.ass')) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    const content = e.target.result;
-                    const subtitles = parseASS(content);
-                    displaySubtitles(subtitles);
-                };
-                reader.readAsText(file);
-            } else {
-                alert('Please upload a valid .ass file');
-            }
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeConverter();
         });
+        
+        function initializeConverter() {
+            document.getElementById('file-input').addEventListener('change', function(event) {
+                const file = event.target.files[0];
+                if (file && file.name.endsWith('.ass')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const content = e.target.result;
+                        const subtitles = parseASS(content);
+                        displaySubtitles(subtitles);
+                    };
+                    reader.readAsText(file);
+                } else {
+                    alert('Please upload a valid .ass file');
+                }
+            });
+        }
 
         function parseASS(content) {
             const subtitles = [];
             const lines = content.split('\n');
             let isInScript = false;
 
-            // Extract subtitles from the ASS file
-            for (let line of lines) {
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i];
+                
                 if (line.startsWith('[Events]')) {
                     isInScript = true;
                     continue;
@@ -231,7 +244,7 @@
 
                 if (isInScript && line.trim() && !line.startsWith('Format')) {
                     const parts = line.split(',');
-                    if (parts.length >= 5) {
+                    if (parts.length >= 10) {
                         const text = parts.slice(9).join(',').trim();
                         if (text) {
                             subtitles.push(text);
@@ -246,7 +259,12 @@
             const container = document.getElementById('subtitle-container');
             const copyButton = document.getElementById('copy-btn');
             
-            container.textContent = subtitles.join('\n');
+            const fragment = document.createDocumentFragment();
+            const textNode = document.createTextNode(subtitles.join('\n'));
+            fragment.appendChild(textNode);
+            
+            container.textContent = '';
+            container.appendChild(fragment);
             container.classList.add('active');
             
             copyButton.style.display = 'block';
