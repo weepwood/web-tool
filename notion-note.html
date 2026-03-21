@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>小记 Pro - 本地知识库</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
+    <style>
+        :root {
+            --sidebar-width: 260px;
+            --notion-bg: #ffffff;
+            --sidebar-bg: #f7f7f5;
+            --notion-text: #37352f;
+            --notion-border: rgba(15, 15, 15, 0.1);
+            --accent-blue: #2383e2;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background-color: var(--notion-bg);
+            color: var(--notion-text);
+            margin: 0; display: flex; height: 100vh; overflow: hidden;
+        }
+
+        /* 侧边栏 */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--sidebar-bg);
+            border-right: 1px solid var(--notion-border);
+            display: flex; flex-direction: column; padding: 20px 10px;
+        }
+
+        .sidebar-title { font-size: 14px; font-weight: 600; color: rgba(55, 53, 47, 0.5); margin: 20px 10px 10px; text-transform: uppercase; }
+
+        .history-item {
+            display: flex; justify-content: space-between; align-items: center;
+            padding: 8px 10px; border-radius: 6px; cursor: pointer;
+            font-size: 14px; margin-bottom: 2px; transition: background 0.2s;
+        }
+        .history-item:hover { background: rgba(0,0,0,0.05); }
+        .history-item.active { background: rgba(0,0,0,0.08); font-weight: 600; }
+        
+        .delete-btn { opacity: 0; color: #eb5757; padding: 2px 6px; border-radius: 4px; transition: 0.2s; }
+        .history-item:hover .delete-btn { opacity: 1; }
+        .delete-btn:hover { background: rgba(235, 87, 87, 0.1); }
+
+        /* 主体区域 */
+        .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
+
+        .top-bar {
+            padding: 20px 40px; border-bottom: 1px solid var(--notion-border);
+            position: sticky; top: 0; background: white; z-index: 10;
+        }
+
+        .controls { display: flex; gap: 12px; margin-top: 15px; flex-wrap: wrap; }
+
+        .gallery-grid {
+            padding: 30px 40px;
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;
+        }
+
+        /* 卡片 */
+        .card {
+            border: 1px solid var(--notion-border); border-radius: 8px; padding: 16px;
+            display: flex; flex-direction: column; background: white; transition: 0.2s;
+        }
+        .card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .card-title { font-weight: 600; margin-bottom: 8px; font-size: 16px; }
+        .tag { font-size: 11px; padding: 2px 6px; border-radius: 4px; background: #eee; margin-right: 5px; }
+
+        /* 按钮与输入 */
+        .btn { padding: 6px 12px; border-radius: 5px; border: 1px solid var(--notion-border); cursor: pointer; font-size: 13px; background: white; }
+        .btn-primary { background: var(--notion-text); color: white; border: none; }
+        .search-box { flex: 1; padding: 6px 12px; border-radius: 5px; border: 1px solid var(--notion-border); outline: none; }
+
+        input[type="file"] { display: none; }
+        .empty-view { text-align: center; margin-top: 100px; color: #999; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2 style="font-size: 18px; margin: 0 10px;">📔 知识小记 Pro</h2>
+        
+        <div class="sidebar-title">历史记录</div>
+        <div id="historyList"></div>
+        
+        <div style="margin-top: auto; padding: 10px;">
+            <label for="fileInput" class="btn btn-primary" style="display: block; text-align: center;">+ 导入新文件</label>
+            <input type="file" id="fileInput" accept=".csv">
+        </div>
+    </div>
+
+    <div class="main-content">
+        <div class="top-bar" id="topBar" style="display: none;">
+            <h2 id="currentFileName" style="margin: 0;">选择一个文件</h2>
+            <div class="controls">
+                <input type="text" id="searchInput" class="search-box" placeholder="搜索此文件中内容...">
+                <select id="domainFilter" class="btn"><option value="">所有领域</option></select>
+                <select id="sortOrder" class="btn">
+                    <option value="desc">最新优先</option>
+                    <option value="asc">最早优先</option>
+                </select>
+            </div>
+        </div>
+
+        <div id="gallery" class="gallery-grid">
+            <div class="empty-view">
+                <h3>欢迎回来</h3>
+                <p>点击左侧或下方按钮导入 CSV 文件</p>
+            </div>
+        </div>
+    </div>
+
+<script>
+    let currentData = [];
+    let allHistory = JSON.parse(localStorage.getItem('csv_history') || '{}');
+
+    // 初始化加载历史列表
+    renderHistoryList();
+
+    document.getElementById('fileInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: function(results) {
+                const fileName = file.name;
+                const fileId = 'id_' + Date.now();
+                
+                // 保存到本地存储
+                allHistory[fileId] = {
+                    name: fileName,
+                    data: results.data,
+                    time: new Date().toLocaleString()
+                };
+                saveToLocal();
+                renderHistoryList();
+                loadFile(fileId);
+            }
+        });
+    });
+
+    function saveToLocal() {
+        localStorage.setItem('csv_history', JSON.stringify(allHistory));
+    }
+
+    function renderHistoryList() {
+        const list = document.getElementById('historyList');
+        list.innerHTML = '';
+        
+        Object.keys(allHistory).sort((a,b) => b.split('_')[1] - a.split('_')[1]).forEach(id => {
+            const item = document.createElement('div');
+            item.className = 'history-item';
+            item.innerHTML = `
+                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:160px;">📄 ${allHistory[id].name}</span>
+                <span class="delete-btn" onclick="deleteFile(event, '${id}')">✕</span>
+            `;
+            item.onclick = () => loadFile(id);
+            list.appendChild(item);
+        });
+    }
+
+    function deleteFile(e, id) {
+        e.stopPropagation();
+        if(confirm('确定删除该历史记录吗？')) {
+            delete allHistory[id];
+            saveToLocal();
+            renderHistoryList();
+            location.reload(); // 刷新以清空当前视图
+        }
+    }
+
+    function loadFile(id) {
+        const fileRecord = allHistory[id];
+        if (!fileRecord) return;
+
+        currentData = fileRecord.data;
+        document.getElementById('currentFileName').innerText = fileRecord.name;
+        document.getElementById('topBar').style.display = 'block';
+        
+        // 更新侧边栏高亮
+        document.querySelectorAll('.history-item').forEach(el => el.classList.remove('active'));
+        event?.currentTarget?.classList?.add('active');
+
+        // 初始化筛选器
+        const domains = [...new Set(currentData.map(i => i['领域']).filter(Boolean))];
+        const filter = document.getElementById('domainFilter');
+        filter.innerHTML = '<option value="">所有领域</option>' + domains.map(d => `<option value="${d}">${d}</option>`).join('');
+
+        renderGallery();
+    }
+
+    // 监听搜索和筛选
+    document.querySelectorAll('.search-box, .btn').forEach(el => {
+        el.addEventListener('input', renderGallery);
+    });
+
+    function renderGallery() {
+        const search = document.getElementById('searchInput').value.toLowerCase();
+        const domain = document.getElementById('domainFilter').value;
+        const sort = document.getElementById('sortOrder').value;
+
+        let filtered = currentData.filter(item => {
+            const content = (item['名称'] + item['描述'] + item['领域']).toLowerCase();
+            return content.includes(search) && (!domain || item['领域'] === domain);
+        });
+
+        filtered.sort((a,b) => {
+            const tA = new Date(a['创建时间'] || a['日期'] || 0);
+            const tB = new Date(b['创建时间'] || b['日期'] || 0);
+            return sort === 'desc' ? tB - tA : tA - tB;
+        });
+
+        const gallery = document.getElementById('gallery');
+        gallery.innerHTML = filtered.map(item => `
+            <div class="card">
+                <div class="card-title">${item['名称'] || '未命名'}</div>
+                <div style="font-size:12px; color:#888; margin-bottom:10px;">
+                    ${item['创建时间'] || item['日期'] || ''}
+                </div>
+                <div>
+                    ${item['领域'] ? `<span class="tag" style="background:#e7f3ff; color:#0b67c2">${item['领域']}</span>` : ''}
+                    ${item['用途'] ? `<span class="tag">${item['用途']}</span>` : ''}
+                </div>
+                <div style="font-size:14px; color:#666; margin-top:12px; line-height:1.5;">
+                    ${item['描述'] || ''}
+                </div>
+                ${item['链接'] ? `<a href="${item['链接']}" target="_blank" style="margin-top:auto; padding-top:15px; font-size:12px; color:#2383e2; text-decoration:none;">查看原文 ↗</a>` : ''}
+            </div>
+        `).join('');
+    }
+</script>
+</body>
+</html>
