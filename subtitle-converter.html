@@ -1,285 +1,272 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ASS Subtitle Converter</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+    <title>ASS Subtitle Pro - 高级字幕提取器</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary-color: #2383e2; /* Notion 蓝 */
+            --bg-color: #f7f9fb;
+            --card-bg: #ffffff;
+            --text-main: #37352f;
+            --text-muted: #73726e;
+            --border-color: #edeef0;
+            --success-color: #008a00;
+        }
+
         body {
-            font-family: 'Poppins', -apple-system, BlinkMacSystemFont, sans-serif;
-            background-color: #f4f6f9;
-            padding: 40px;
+            font-family: 'Inter', -apple-system, system-ui, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
             margin: 0;
-            opacity: 0;
-            animation: fadeIn 0.6s ease forwards;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 40px 20px;
         }
-        @keyframes fadeIn {
-            to { opacity: 1; }
-        }
-        h1 {
-            font-size: 2rem;
-            color: #2c3e50;
+
+        .app-header {
             text-align: center;
-            position: relative;
-            opacity: 0;
-            animation: slideDown 0.8s ease forwards 0.3s;
+            margin-bottom: 40px;
         }
-        @keyframes slideDown {
-            to { 
-                opacity: 1;
-                transform: translateY(0);
-            }
-            from { 
-                opacity: 0;
-                transform: translateY(-20px);
-            }
+
+        .app-header h1 {
+            font-size: 2.5rem;
+            font-weight: 600;
+            margin: 0;
+            letter-spacing: -0.5px;
         }
-        h1::after {
-            content: '';
-            position: absolute;
-            bottom: -10px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 0;
-            height: 3px;
-            background-color: #3498db;
-            animation: expandLine 0.8s ease forwards 1s;
+
+        .app-header p {
+            color: var(--text-muted);
+            margin-top: 8px;
         }
-        @keyframes expandLine {
-            to { width: 100px; }
-        }
+
         .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background-color: #ffffff;
-            border-radius: 10px;
-            padding: 30px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            transform: translateY(20px);
-            opacity: 0;
-            animation: slideUp 0.6s ease forwards 0.5s;
-            will-change: transform, opacity;
+            width: 100%;
+            max-width: 900px;
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 10px 20px rgba(0,0,0,0.05);
+            padding: 32px;
+            box-sizing: border-box;
         }
-        @keyframes slideUp {
-            to { 
-                opacity: 1;
-                transform: translateY(0);
-            }
-            from { 
-                opacity: 0;
-                transform: translateY(20px);
-            }
-        }
-        #file-input {
-            font-size: 1rem;
-            margin-bottom: 20px;
-            display: block;
-            margin: 0 auto;
-            padding: 10px;
-            cursor: pointer;
-            background-color: #3498db;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            transition: transform 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-        #file-input:hover {
-            background-color: #2980b9;
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
-        }
-        #subtitle-container {
-            margin-top: 20px;
-            padding: 15px;
+
+        /* 拖拽上传区域优化 */
+        .upload-area {
+            border: 2px dashed var(--border-color);
             border-radius: 8px;
-            background-color: #ecf0f1;
-            font-size: 1rem;
-            max-height: 300px;
-            overflow-y: auto;
-            line-height: 1.6;
-            transition: transform 0.3s ease, opacity 0.3s ease;
-            transform-origin: top;
-            will-change: transform;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #fafafa;
         }
-        #subtitle-container.active {
-            animation: expandContainer 0.5s ease forwards;
+
+        .upload-area:hover, .upload-area.dragover {
+            border-color: var(--primary-color);
+            background: #f0f7ff;
         }
-        @keyframes expandContainer {
-            from { 
-                transform: scaleY(0.8);
-                opacity: 0.8;
-            }
-            to { 
-                transform: scaleY(1);
-                opacity: 1;
-            }
-        }
-        #copy-btn {
-            margin-top: 20px;
+
+        .upload-icon {
+            font-size: 40px;
+            margin-bottom: 12px;
             display: block;
+        }
+
+        #file-input { display: none; }
+
+        /* 字幕预览区优化 */
+        #subtitle-wrapper {
+            margin-top: 24px;
+            display: none;
+        }
+
+        .stats-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+        }
+
+        #subtitle-container {
             width: 100%;
-            padding: 15px;
-            background-color: #27ae60;
+            height: 400px;
+            background: #fbfbfc;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 16px;
+            font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            box-sizing: border-box;
+        }
+
+        /* 按钮美化 */
+        .btn-group {
+            margin-top: 24px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .primary-btn {
+            background-color: var(--primary-color);
             color: white;
             border: none;
-            border-radius: 5px;
-            font-size: 1rem;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 500;
             cursor: pointer;
-            transition: transform 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease;
-            position: relative;
-            overflow: hidden;
-            transform: translateY(10px);
-            opacity: 0;
-            will-change: transform, opacity;
+            flex: 1;
+            transition: opacity 0.2s;
         }
-        #copy-btn.active {
-            animation: fadeInUp 0.5s ease forwards;
-        }
-        @keyframes fadeInUp {
-            from { 
-                opacity: 0;
-                transform: translateY(10px);
-            }
-            to { 
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-        #copy-btn:hover {
-            background-color: #2ecc71;
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(39, 174, 96, 0.4);
-        }
-        #copy-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.2);
-            transition: transform 0.4s ease;
-            transform: translateX(-100%);
-        }
-        #copy-btn:hover::before {
-            transform: translateX(100%);
-        }
-        .back-btn {
-            display: inline-block;
-            margin-top: 20px;
-            padding: 10px 20px;
-            background-color: #7f8c8d;
-            color: white;
+
+        .primary-btn:hover { opacity: 0.9; }
+
+        .secondary-btn {
+            background: white;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 12px 24px;
+            border-radius: 6px;
             text-decoration: none;
-            border-radius: 5px;
-            transition: transform 0.3s ease, background-color 0.3s ease, box-shadow 0.3s ease;
-            opacity: 0;
-            animation: fadeIn 0.6s ease forwards 1s;
+            font-size: 14px;
+            transition: background 0.2s;
         }
-        .back-btn:hover {
-            background-color: #95a5a6;
-            transform: translateY(-3px);
-            box-shadow: 0 5px 15px rgba(127, 140, 141, 0.4);
+
+        .secondary-btn:hover { background: #f5f5f5; }
+
+        /* 动画 */
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
-        @media (max-width: 768px) {
-            body {
-                padding: 20px;
-            }
-            .container {
-                padding: 20px;
-            }
-        }
+
+        .animate-in { animation: slideIn 0.4s ease forwards; }
+
     </style>
 </head>
 <body>
 
+    <header class="app-header">
+        <h1>ASS Subtitle Pro</h1>
+        <p>快速、纯净的字幕文本提取工具</p>
+    </header>
+
     <div class="container">
-        <h1>ASS Subtitle Converter</h1>
-        <input type="file" id="file-input" accept=".ass">
-        <div id="subtitle-container"></div>
-        <button id="copy-btn" style="display:none;">Copy Subtitles</button>
+        <div class="upload-area" id="drop-zone" onclick="document.getElementById('file-input').click()">
+            <span class="upload-icon">📄</span>
+            <p>点击或拖拽 .ass 文件至此处</p>
+            <span style="font-size: 12px; color: #a1a1a1;">支持解析对话行并自动去重</span>
+            <input type="file" id="file-input" accept=".ass">
+        </div>
+
+        <div id="subtitle-wrapper">
+            <div class="stats-bar">
+                <span id="file-name-display"></span>
+                <span id="line-count"></span>
+            </div>
+            <div id="subtitle-container" contenteditable="false"></div>
+            
+            <div class="btn-group">
+                <button id="copy-btn" class="primary-btn">复制纯文本</button>
+                <button onclick="location.reload()" class="secondary-btn">重新上传</button>
+            </div>
+        </div>
     </div>
-    
-    <div style="text-align: center;">
-        <a href="index.html" class="back-btn">Back to Tools</a>
+
+    <div style="margin-top: 30px;">
+        <a href="index.html" class="secondary-btn">← 返回工具集</a>
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            initializeConverter();
-        });
-        
-        function initializeConverter() {
-            document.getElementById('file-input').addEventListener('change', function(event) {
-                const file = event.target.files[0];
-                if (file && file.name.endsWith('.ass')) {
-                    const reader = new FileReader();
-                    reader.onload = function(e) {
-                        const content = e.target.result;
-                        const subtitles = parseASS(content);
-                        displaySubtitles(subtitles);
-                    };
-                    reader.readAsText(file);
-                } else {
-                    alert('Please upload a valid .ass file');
-                }
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const wrapper = document.getElementById('subtitle-wrapper');
+        const container = document.getElementById('subtitle-container');
+        const copyBtn = document.getElementById('copy-btn');
+
+        // 处理拖拽逻辑
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, e => {
+                e.preventDefault();
+                e.stopPropagation();
             });
+        });
+
+        dropZone.addEventListener('dragover', () => dropZone.classList.add('dragover'));
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            dropZone.classList.remove('dragover');
+            handleFile(e.dataTransfer.files[0]);
+        });
+
+        fileInput.addEventListener('change', (e) => handleFile(e.target.files[0]));
+
+        function handleFile(file) {
+            if (file && file.name.endsWith('.ass')) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const subtitles = parseASS(e.target.result);
+                    displaySubtitles(subtitles, file.name);
+                };
+                reader.readAsText(file);
+            } else {
+                alert('请上传有效的 .ass 文件');
+            }
         }
 
         function parseASS(content) {
             const subtitles = [];
             const lines = content.split('\n');
-            let isInScript = false;
+            let isEvents = false;
 
-            for (let i = 0; i < lines.length; i++) {
-                const line = lines[i];
-                
+            lines.forEach(line => {
                 if (line.startsWith('[Events]')) {
-                    isInScript = true;
-                    continue;
+                    isEvents = true;
+                    return;
                 }
-
-                if (isInScript && line.trim() && !line.startsWith('Format')) {
+                if (isEvents && line.startsWith('Dialogue:')) {
                     const parts = line.split(',');
                     if (parts.length >= 10) {
-                        const text = parts.slice(9).join(',').trim();
-                        if (text) {
-                            subtitles.push(text);
-                        }
+                        // 提取对话文本并过滤 ASS 标签（如 {\pos...}）
+                        let text = parts.slice(9).join(',').trim();
+                        text = text.replace(/\{.*?\}/g, '').replace(/\\N/g, '\n');
+                        if (text) subtitles.push(text);
                     }
                 }
-            }
+            });
             return subtitles;
         }
 
-        function displaySubtitles(subtitles) {
-            const container = document.getElementById('subtitle-container');
-            const copyButton = document.getElementById('copy-btn');
+        function displaySubtitles(subtitles, fileName) {
+            dropZone.style.display = 'none';
+            wrapper.style.display = 'block';
+            wrapper.classList.add('animate-in');
             
-            const fragment = document.createDocumentFragment();
-            const textNode = document.createTextNode(subtitles.join('\n'));
-            fragment.appendChild(textNode);
-            
-            container.textContent = '';
-            container.appendChild(fragment);
-            container.classList.add('active');
-            
-            copyButton.style.display = 'block';
-            copyButton.classList.add('active');
-            
-            copyButton.onclick = function() {
+            container.textContent = subtitles.join('\n\n');
+            document.getElementById('file-name-display').textContent = `文件名: ${fileName}`;
+            document.getElementById('line-count').textContent = `共 ${subtitles.length} 条对话`;
+
+            copyBtn.onclick = () => {
                 navigator.clipboard.writeText(container.textContent).then(() => {
-                    copyButton.textContent = 'Copied!';
+                    const originalText = copyBtn.textContent;
+                    copyBtn.textContent = '已复制到剪贴板！';
+                    copyBtn.style.backgroundColor = 'var(--success-color)';
                     setTimeout(() => {
-                        copyButton.textContent = 'Copy Subtitles';
+                        copyBtn.textContent = originalText;
+                        copyBtn.style.backgroundColor = 'var(--primary-color)';
                     }, 2000);
                 });
             };
         }
     </script>
-
 </body>
 </html>
