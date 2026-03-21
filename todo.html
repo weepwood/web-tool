@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZenTask - 极简待办管理</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
+        
+        body {
+            font-family: 'Noto+Sans+SC', sans-serif;
+            background-color: #f8fafc;
+        }
+        .task-card {
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .task-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        .priority-high { border-left: 4px solid #ef4444; }
+        .priority-medium { border-left: 4px solid #f59e0b; }
+        .priority-low { border-left: 4px solid #10b981; }
+        
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="min-h-screen text-slate-800">
+
+    <div id="app" class="max-w-4xl mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-slate-900">今日清单</h1>
+                <p id="current-date" class="text-slate-500"></p>
+            </div>
+            <div class="flex gap-4">
+                <div class="text-right">
+                    <p class="text-sm text-slate-400">完成率</p>
+                    <p id="completion-rate" class="text-xl font-semibold text-indigo-600">0%</p>
+                </div>
+            </div>
+        </header>
+
+        <!-- Stats Bar -->
+        <div class="grid grid-cols-3 gap-4 mb-8">
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
+                <div class="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600">
+                    <i class="fas fa-list-ul"></i>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500">总任务</p>
+                    <p id="total-tasks" class="font-bold">0</p>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
+                <div class="w-10 h-10 rounded-full bg-green-50 flex items-center justify-center text-green-600">
+                    <i class="fas fa-check"></i>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500">已完成</p>
+                    <p id="done-tasks" class="font-bold">0</p>
+                </div>
+            </div>
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4">
+                <div class="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center text-orange-600">
+                    <i class="fas fa-clock"></i>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-500">待处理</p>
+                    <p id="pending-tasks" class="font-bold">0</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Section -->
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 mb-8">
+            <div class="flex flex-col md:flex-row gap-4">
+                <input type="text" id="task-input" placeholder="下一步要做什么？" 
+                    class="flex-1 px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
+                <select id="priority-select" class="px-4 py-3 rounded-xl border border-slate-200 focus:outline-none bg-white">
+                    <option value="high">紧急重要</option>
+                    <option value="medium" selected>普通任务</option>
+                    <option value="low">琐碎闲事</option>
+                </select>
+                <button onclick="addTask()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-xl font-medium transition-colors">
+                    添加任务
+                </button>
+            </div>
+        </div>
+
+        <!-- Task List Filters -->
+        <div class="flex gap-4 mb-4 overflow-x-auto pb-2 custom-scrollbar">
+            <button onclick="filterTasks('all')" class="filter-btn active px-4 py-2 rounded-full bg-indigo-100 text-indigo-700 text-sm font-medium">全部</button>
+            <button onclick="filterTasks('high')" class="filter-btn px-4 py-2 rounded-full bg-white text-slate-600 border border-slate-200 text-sm hover:border-indigo-300">紧急重要</button>
+            <button onclick="filterTasks('medium')" class="filter-btn px-4 py-2 rounded-full bg-white text-slate-600 border border-slate-200 text-sm hover:border-indigo-300">普通任务</button>
+            <button onclick="filterTasks('low')" class="filter-btn px-4 py-2 rounded-full bg-white text-slate-600 border border-slate-200 text-sm hover:border-indigo-300">琐碎闲事</button>
+        </div>
+
+        <!-- Empty State -->
+        <div id="empty-state" class="hidden flex flex-col items-center py-20 text-slate-400">
+            <i class="fas fa-mug-hot text-5xl mb-4"></i>
+            <p>太棒了，目前没有待办事项</p>
+        </div>
+
+        <!-- Task List -->
+        <div id="task-list" class="space-y-3">
+            <!-- Tasks will be injected here -->
+        </div>
+
+        <!-- Action Bar -->
+        <div class="mt-8 flex justify-between items-center text-sm text-slate-400">
+            <p>提示：点击任务即可标记完成</p>
+            <button onclick="clearCompleted()" class="hover:text-red-500 transition-colors">清除已完成</button>
+        </div>
+    </div>
+
+    <!-- Simple Custom Modal for Alerts -->
+    <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+            <h3 id="modal-title" class="text-lg font-bold mb-2">提示</h3>
+            <p id="modal-msg" class="text-slate-600 mb-6"></p>
+            <button onclick="closeModal()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-medium">知道了</button>
+        </div>
+    </div>
+
+    <script>
+        let tasks = JSON.parse(localStorage.getItem('zen_tasks')) || [];
+        let currentFilter = 'all';
+
+        // Initialize
+        window.onload = () => {
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            document.getElementById('current-date').innerText = new Date().toLocaleDateString('zh-CN', options);
+            renderTasks();
+        };
+
+        function showModal(title, msg) {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-msg').innerText = msg;
+            document.getElementById('modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('modal').classList.add('hidden');
+        }
+
+        function addTask() {
+            const input = document.getElementById('task-input');
+            const priority = document.getElementById('priority-select').value;
+            const text = input.value.trim();
+
+            if (!text) {
+                showModal('输入错误', '请输入具体的事情内容哦');
+                return;
+            }
+
+            const newTask = {
+                id: Date.now(),
+                text: text,
+                priority: priority,
+                completed: false,
+                createdAt: new Date()
+            };
+
+            tasks.unshift(newTask);
+            saveAndRender();
+            input.value = '';
+        }
+
+        function toggleTask(id) {
+            tasks = tasks.map(task => 
+                task.id === id ? { ...task, completed: !task.completed } : task
+            );
+            saveAndRender();
+        }
+
+        function deleteTask(id, event) {
+            event.stopPropagation();
+            tasks = tasks.filter(task => task.id !== id);
+            saveAndRender();
+        }
+
+        function filterTasks(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.classList.remove('bg-indigo-100', 'text-indigo-700', 'active');
+                btn.classList.add('bg-white', 'text-slate-600', 'border-slate-200');
+            });
+            event.target.classList.add('bg-indigo-100', 'text-indigo-700', 'active');
+            event.target.classList.remove('bg-white', 'text-slate-600', 'border-slate-200');
+            renderTasks();
+        }
+
+        function clearCompleted() {
+            const completedCount = tasks.filter(t => t.completed).length;
+            if (completedCount === 0) return;
+            tasks = tasks.filter(task => !task.completed);
+            saveAndRender();
+        }
+
+        function saveAndRender() {
+            localStorage.setItem('zen_tasks', JSON.stringify(tasks));
+            renderTasks();
+        }
+
+        function updateStats() {
+            const total = tasks.length;
+            const done = tasks.filter(t => t.completed).length;
+            const pending = total - done;
+            const rate = total === 0 ? 0 : Math.round((done / total) * 100);
+
+            document.getElementById('total-tasks').innerText = total;
+            document.getElementById('done-tasks').innerText = done;
+            document.getElementById('pending-tasks').innerText = pending;
+            document.getElementById('completion-rate').innerText = `${rate}%`;
+        }
+
+        function renderTasks() {
+            const listElement = document.getElementById('task-list');
+            const emptyState = document.getElementById('empty-state');
+            
+            let filtered = tasks;
+            if (currentFilter !== 'all') {
+                filtered = tasks.filter(t => t.priority === currentFilter);
+            }
+
+            listElement.innerHTML = '';
+            
+            if (filtered.length === 0) {
+                emptyState.classList.remove('hidden');
+            } else {
+                emptyState.classList.add('hidden');
+                filtered.forEach(task => {
+                    const priorityLabels = { high: '紧急重要', medium: '普通任务', low: '琐碎闲事' };
+                    const priorityColors = { high: 'text-red-500', medium: 'text-orange-500', low: 'text-emerald-500' };
+                    
+                    const div = document.createElement('div');
+                    div.className = `task-card bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 cursor-pointer priority-${task.priority} ${task.completed ? 'opacity-60' : ''}`;
+                    div.onclick = () => toggleTask(task.id);
+                    
+                    div.innerHTML = `
+                        <div class="w-6 h-6 rounded-full border-2 border-slate-200 flex items-center justify-center transition-all ${task.completed ? 'bg-indigo-500 border-indigo-500' : ''}">
+                            ${task.completed ? '<i class="fas fa-check text-white text-xs"></i>' : ''}
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-medium ${task.completed ? 'line-through text-slate-400' : 'text-slate-800'}">${task.text}</p>
+                            <span class="text-[10px] uppercase tracking-wider font-bold ${priorityColors[task.priority]}">${priorityLabels[task.priority]}</span>
+                        </div>
+                        <button onclick="deleteTask(${task.id}, event)" class="p-2 text-slate-300 hover:text-red-500 transition-colors">
+                            <i class="far fa-trash-alt"></i>
+                        </button>
+                    `;
+                    listElement.appendChild(div);
+                });
+            }
+            updateStats();
+        }
+    </script>
+</body>
+</html>
