@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Notion Style CSV Viewer</title>
+    <style>
+        :root {
+            --notion-bg: #ffffff;
+            --notion-text: #37352f;
+            --notion-secondary: rgba(55, 53, 47, 0.65);
+            --notion-border: rgba(55, 53, 47, 0.16);
+            --notion-hover: rgba(55, 53, 47, 0.08);
+            --notion-blue: #2383e2;
+            --notion-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, "Apple Color Emoji", Arial, sans-serif, "Segoe UI Emoji", "Segoe UI Symbol";
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: var(--notion-font);
+            background-color: var(--notion-bg);
+            color: var(--notion-text);
+            padding: 40px 20px;
+            line-height: 1.5;
+            -webkit-font-smoothing: antialiased;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        header {
+            margin-bottom: 40px;
+            padding: 0 20px;
+        }
+        
+        h1 {
+            font-size: 40px;
+            font-weight: 700;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .subtitle {
+            font-size: 16px;
+            color: var(--notion-secondary);
+        }
+        
+        /* 上传区域优化 - 更加内敛 */
+        .upload-section {
+            margin-bottom: 32px;
+            padding: 0 20px;
+        }
+        
+        .upload-area {
+            border: 1px solid var(--notion-border);
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: background 200ms ease;
+        }
+        
+        .upload-area:hover {
+            background: var(--notion-hover);
+        }
+        
+        .upload-icon {
+            font-size: 40px;
+            margin-bottom: 12px;
+            display: block;
+        }
+        
+        .upload-text {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--notion-secondary);
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .btn {
+            background: transparent;
+            color: var(--notion-text);
+            border: 1px solid var(--notion-border);
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            margin-top: 15px;
+            transition: background 20ms ease-in;
+        }
+        
+        .btn:hover {
+            background: var(--notion-hover);
+        }
+
+        /* 状态栏 - 模仿 Notion 的面包屑或小文字 */
+        .status-bar {
+            padding: 0 20px;
+            margin-bottom: 20px;
+            font-size: 12px;
+            color: var(--notion-secondary);
+            display: flex;
+            gap: 16px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        /* 数据视图 - 模仿 Gallery View */
+        .data-section {
+            padding: 20px;
+            border-top: 1px solid var(--notion-border);
+        }
+        
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            color: var(--notion-text);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-title::before {
+            content: "⊞";
+            font-size: 18px;
+        }
+        
+        .cards-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 16px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 3px;
+            border: 1px solid var(--notion-border);
+            transition: background 100ms ease-out;
+            cursor: pointer;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .card:hover {
+            background: var(--notion-hover);
+        }
+        
+        /* 模拟 Notion 画廊的顶部装饰 */
+        .card-cover {
+            height: 8px;
+            background: #f1f1f1;
+            border-bottom: 1px solid var(--notion-border);
+        }
+
+        .card-body {
+            padding: 12px 16px 16px;
+        }
+        
+        .card-header {
+            font-weight: 600;
+            font-size: 14px;
+            margin-bottom: 8px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            color: var(--notion-text);
+        }
+        
+        .card-content {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        
+        .field-item {
+            font-size: 12px;
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
+        }
+        
+        .field-label {
+            color: var(--notion-secondary);
+            font-weight: 400;
+            min-width: fit-content;
+        }
+        
+        .field-value {
+            color: var(--notion-text);
+            word-break: break-word;
+        }
+
+        .hidden {
+            display: none;
+        }
+        
+        @media (max-width: 600px) {
+            h1 { font-size: 30px; }
+            .cards-container { grid-template-columns: 1fr; }
+        }
+        /* 允许属性列表垂直展开，并增加间距 */
+        .card-content {
+            display: flex;
+            flex-direction: column;
+            gap: 10px; /* 增加属性间的间距 */
+            margin-top: 4px;
+        }
+        
+        /* 优化属性标签和值的排版 */
+        .field-item {
+            font-size: 12px;
+            display: flex;
+            flex-direction: column; /* 标签在上方，值在下方，更适合长内容 */
+            gap: 2px;
+            border-bottom: 1px solid rgba(55, 53, 47, 0.05); /* 增加微弱的分隔线 */
+            padding-bottom: 4px;
+        }
+
+        .field-label {
+            color: var(--notion-secondary);
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.02em;
+        }
+        
+        .field-value {
+            color: var(--notion-text);
+            line-height: 1.4;
+            white-space: pre-wrap; /* 保留 CSV 中的换行符 */
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><span style="font-size: 45px;">📄</span> Notion CSV Viewer</h1>
+            <p class="subtitle">将导出的 CSV 数据转化为画廊视图卡片</p>
+        </header>
+        
+        <div class="upload-section">
+            <div class="upload-area" id="dropArea">
+                <span class="upload-icon">📥</span>
+                <p class="upload-text">点击或拖拽 CSV 文件至此</p>
+                <input type="file" id="fileInput" class="file-input" accept=".csv">
+                <button class="btn" onclick="document.getElementById('fileInput').click()">选择文件</button>
+            </div>
+        </div>
+        
+        <div class="status-bar hidden" id="statusBar">
+            <span id="fileName">...</span>
+            <span id="recordCount">0 RECORDS</span>
+            <span id="fieldCount">0 PROPERTIES</span>
+        </div>
+        
+        <div class="data-section hidden" id="dataSection">
+            <h2 class="section-title">Gallery View</h2>
+            <div class="cards-container" id="cardsContainer"></div>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const dropArea = document.getElementById('dropArea');
+        const statusBar = document.getElementById('statusBar');
+        const fileName = document.getElementById('fileName');
+        const recordCount = document.getElementById('recordCount');
+        const fieldCount = document.getElementById('fieldCount');
+        const dataSection = document.getElementById('dataSection');
+        const cardsContainer = document.getElementById('cardsContainer');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, e => { e.preventDefault(); e.stopPropagation(); }, false);
+        });
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropArea.addEventListener(eventName, () => dropArea.style.background = 'var(--notion-hover)', false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropArea.addEventListener(eventName, () => dropArea.style.background = 'transparent', false);
+        });
+
+        dropArea.addEventListener('drop', e => {
+            const files = e.dataTransfer.files;
+            if (files.length) handleFiles(files[0]);
+        }, false);
+
+        fileInput.addEventListener('change', function() {
+            if (this.files.length) handleFiles(this.files[0]);
+        });
+
+        function handleFiles(file) {
+            if (!file.name.toLowerCase().endsWith('.csv')) {
+                alert('请上传 CSV 文件');
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = e => parseCSV(e.target.result, file.name);
+            reader.readAsText(file);
+        }
+
+        function parseCSV(csvContent, filename) {
+            const lines = csvContent.split(/\r?\n/).filter(line => line.trim() !== '');
+            if (lines.length < 2) return;
+
+            const headers = parseLine(lines[0]);
+            const records = [];
+            for (let i = 1; i < lines.length; i++) {
+                const values = parseLine(lines[i]);
+                if (values.length === headers.length) {
+                    const record = {};
+                    headers.forEach((h, index) => record[h] = values[index]);
+                    records.push(record);
+                }
+            }
+
+            fileName.textContent = filename.toUpperCase();
+            recordCount.textContent = `${records.length} RECORDS`;
+            fieldCount.textContent = `${headers.length} PROPERTIES`;
+            statusBar.classList.remove('hidden');
+            renderCards(records, headers);
+            dataSection.classList.remove('hidden');
+        }
+
+        function parseLine(line) {
+            const result = [];
+            let current = '', inQuotes = false;
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (char === '"') {
+                    if (inQuotes && line[i+1] === '"') { current += '"'; i++; }
+                    else inQuotes = !inQuotes;
+                } else if (char === ',' && !inQuotes) {
+                    result.push(current.trim());
+                    current = '';
+                } else current += char;
+            }
+            result.push(current.trim());
+            return result;
+        }
+
+        // 增强版渲染函数：展示更多内容并优化排版
+        function renderCards(records, headers) {
+            cardsContainer.innerHTML = '';
+            
+            if (records.length === 0) {
+                cardsContainer.innerHTML = '<p style="grid-column: 1/-1; text-align: center; padding: 40px; color: var(--notion-secondary);">没有找到有效的数据记录</p>';
+                return;
+            }
+
+            records.forEach((record, index) => {
+                const card = document.createElement('div');
+                card.className = 'card';
+                
+                // 1. 确定标题：优先使用第一个字段，如果为空则显示“无标题”
+                const titleKey = headers[0];
+                const title = record[titleKey] || "Untitled";
+                
+                // 2. 收集其余属性（排除已作为标题的第一个字段，且只显示有值的字段）
+                const properties = headers.slice(1).filter(h => record[h] && record[h].trim() !== '');
+                
+                // 3. 构建 HTML 结构
+                card.innerHTML = `
+                    <div class="card-cover"></div>
+                    <div class="card-body">
+                        <div class="card-header" title="${title}">${title}</div>
+                        <div class="card-content">
+                            ${properties.map(h => `
+                                <div class="field-item">
+                                    <div class="field-label">${h}</div>
+                                    <div class="field-value">${record[h]}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `;
+                
+                cardsContainer.appendChild(card);
+            });
+        }
+    </script>
+</body>
+</html>
