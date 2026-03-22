@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>小记 Pro - 本地知识库</title>
+    <title>Notion CSV 浏览器</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         :root {
@@ -14,7 +14,6 @@
             --notion-border: rgba(15, 15, 15, 0.1);
             --accent-blue: #2383e2;
         }
-
         * { box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
@@ -22,17 +21,14 @@
             color: var(--notion-text);
             margin: 0; display: flex; height: 100vh; overflow: hidden;
         }
-
-        /* 侧边栏 */
         .sidebar {
             width: var(--sidebar-width);
             background: var(--sidebar-bg);
             border-right: 1px solid var(--notion-border);
             display: flex; flex-direction: column; padding: 20px 10px;
+            flex-shrink: 0;
         }
-
-        .sidebar-title { font-size: 14px; font-weight: 600; color: rgba(55, 53, 47, 0.5); margin: 20px 10px 10px; text-transform: uppercase; }
-
+        .sidebar-title { font-size: 12px; font-weight: 600; color: rgba(55, 53, 47, 0.5); margin: 20px 10px 10px; text-transform: uppercase; letter-spacing: 0.5px; }
         .history-item {
             display: flex; justify-content: space-between; align-items: center;
             padding: 8px 10px; border-radius: 6px; cursor: pointer;
@@ -40,101 +36,277 @@
         }
         .history-item:hover { background: rgba(0,0,0,0.05); }
         .history-item.active { background: rgba(0,0,0,0.08); font-weight: 600; }
-        
-        .delete-btn { opacity: 0; color: #eb5757; padding: 2px 6px; border-radius: 4px; transition: 0.2s; }
+        .delete-btn { opacity: 0; color: #eb5757; padding: 2px 6px; border-radius: 4px; transition: 0.2s; cursor: pointer; }
         .history-item:hover .delete-btn { opacity: 1; }
         .delete-btn:hover { background: rgba(235, 87, 87, 0.1); }
 
-        /* 主体区域 */
         .main-content { flex: 1; display: flex; flex-direction: column; overflow-y: auto; }
-
         .top-bar {
             padding: 20px 40px; border-bottom: 1px solid var(--notion-border);
             position: sticky; top: 0; background: white; z-index: 10;
         }
-
-        .controls { display: flex; gap: 12px; margin-top: 15px; flex-wrap: wrap; }
-
+        .controls { display: flex; gap: 12px; margin-top: 15px; flex-wrap: wrap; align-items: center; }
         .gallery-grid {
             padding: 30px 40px;
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 20px;
         }
-
-        /* 卡片 */
         .card {
-            border: 1px solid var(--notion-border); border-radius: 8px; padding: 16px;
+            border: 1px solid var(--notion-border); border-radius: 8px; padding: 18px;
             display: flex; flex-direction: column; background: white; transition: 0.2s;
         }
-        .card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-        .card-title { font-weight: 600; margin-bottom: 8px; font-size: 16px; }
-        .tag { font-size: 11px; padding: 2px 6px; border-radius: 4px; background: #eee; margin-right: 5px; }
+        .card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
+        .card-title { font-weight: 600; margin-bottom: 6px; font-size: 16px; line-height: 1.4; }
+        .card-meta { font-size: 12px; color: #999; margin-bottom: 10px; }
+        .card-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
+        .tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #f0f0ef; white-space: nowrap; }
+        .tag-select { background: #e7f3ff; color: #0b67c2; }
+        .tag-multi { background: #f3e8ff; color: #6b21a8; }
+        .tag-checkbox-true { background: #d1fae5; color: #065f46; }
+        .tag-checkbox-false { background: #fee2e2; color: #991b1b; }
+        .card-field { font-size: 13px; color: #555; line-height: 1.6; margin-bottom: 4px; }
+        .card-field-label { color: #999; font-size: 12px; }
+        .card-link { margin-top: auto; padding-top: 12px; font-size: 12px; color: var(--accent-blue); text-decoration: none; }
+        .card-link:hover { text-decoration: underline; }
 
-        /* 按钮与输入 */
         .btn { padding: 6px 12px; border-radius: 5px; border: 1px solid var(--notion-border); cursor: pointer; font-size: 13px; background: white; }
         .btn-primary { background: var(--notion-text); color: white; border: none; }
-        .search-box { flex: 1; padding: 6px 12px; border-radius: 5px; border: 1px solid var(--notion-border); outline: none; }
-
+        .btn-small { padding: 4px 10px; font-size: 12px; }
+        .search-box { flex: 1; min-width: 180px; padding: 6px 12px; border-radius: 5px; border: 1px solid var(--notion-border); outline: none; font-size: 13px; }
+        .search-box:focus { border-color: var(--accent-blue); box-shadow: 0 0 0 2px rgba(35, 131, 226, 0.15); }
         input[type="file"] { display: none; }
         .empty-view { text-align: center; margin-top: 100px; color: #999; }
+        .field-config { background: #fafafa; border: 1px solid var(--notion-border); border-radius: 8px; padding: 16px; margin-top: 12px; }
+        .field-config label { font-size: 13px; display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+        .field-config select { font-size: 13px; padding: 4px 8px; border-radius: 4px; border: 1px solid var(--notion-border); }
+        .count-badge { font-size: 12px; color: #999; margin-left: 8px; }
+
+        /* 列映射面板 */
+        .mapping-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
+        .mapping-row label { min-width: 80px; font-size: 13px; color: #666; }
+        .mapping-row select { flex: 1; min-width: 120px; }
     </style>
 </head>
 <body>
-
     <div class="sidebar">
-        <h2 style="font-size: 18px; margin: 0 10px;">📔 知识小记 Pro</h2>
-        
+        <h2 style="font-size: 16px; margin: 0 10px;">📋 Notion CSV 浏览器</h2>
+
         <div class="sidebar-title">历史记录</div>
-        <div id="historyList"></div>
-        
+        <div id="historyList" style="overflow-y: auto; flex: 1;"></div>
+
         <div style="margin-top: auto; padding: 10px;">
-            <label for="fileInput" class="btn btn-primary" style="display: block; text-align: center;">+ 导入新文件</label>
+            <label for="fileInput" class="btn btn-primary" style="display: block; text-align: center; padding: 10px;">+ 导入 CSV 文件</label>
             <input type="file" id="fileInput" accept=".csv">
         </div>
     </div>
-
     <div class="main-content">
         <div class="top-bar" id="topBar" style="display: none;">
-            <h2 id="currentFileName" style="margin: 0;">选择一个文件</h2>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div>
+                    <h2 id="currentFileName" style="margin: 0;">选择一个文件</h2>
+                    <span id="recordCount" class="count-badge"></span>
+                </div>
+                <div style="display: flex; gap: 8px;">
+                    <button class="btn btn-small" onclick="toggleMapping()">⚙ 列映射</button>
+                    <button class="btn btn-small" onclick="exportCurrentView()">↓ 导出筛选结果</button>
+                </div>
+            </div>
+
+            <!-- 列映射配置 -->
+            <div id="mappingPanel" class="field-config" style="display: none;">
+                <p style="margin:0 0 10px; font-size:13px; font-weight:600;">列映射设置（选择哪些列用于标题、日期等）</p>
+                <div class="mapping-row">
+                    <label>📌 标题列</label>
+                    <select id="mapTitle" class="btn" onchange="saveMappingAndRender()"></select>
+                </div>
+                <div class="mapping-row">
+                    <label>📅 日期列</label>
+                    <select id="mapDate" class="btn" onchange="saveMappingAndRender()"></select>
+                </div>
+                <div class="mapping-row">
+                    <label>🏷 标签列</label>
+                    <select id="mapTag" class="btn" onchange="saveMappingAndRender()"></select>
+                </div>
+                <div class="mapping-row">
+                    <label>🔗 链接列</label>
+                    <select id="mapLink" class="btn" onchange="saveMappingAndRender()"></select>
+                </div>
+                <div class="mapping-row">
+                    <label>🔍 筛选列</label>
+                    <select id="mapFilter" class="btn" onchange="updateFilterOptions(); saveMappingAndRender();"></select>
+                </div>
+            </div>
+
             <div class="controls">
-                <input type="text" id="searchInput" class="search-box" placeholder="搜索此文件中内容...">
-                <select id="domainFilter" class="btn"><option value="">所有领域</option></select>
+                <input type="text" id="searchInput" class="search-box" placeholder="搜索所有字段...">
+                <select id="filterSelect" class="btn"><option value="">全部</option></select>
                 <select id="sortOrder" class="btn">
                     <option value="desc">最新优先</option>
                     <option value="asc">最早优先</option>
                 </select>
             </div>
         </div>
-
         <div id="gallery" class="gallery-grid">
             <div class="empty-view">
-                <h3>欢迎回来</h3>
-                <p>点击左侧或下方按钮导入 CSV 文件</p>
+                <h3>👋 欢迎使用</h3>
+                <p>导入任意 Notion 导出的 CSV 文件即可浏览</p>
+                <p style="font-size: 13px; color: #bbb;">自动识别列结构，支持搜索、筛选、排序</p>
             </div>
         </div>
     </div>
 
 <script>
     let currentData = [];
-    let allHistory = JSON.parse(localStorage.getItem('csv_history') || '{}');
+    let currentColumns = [];
+    let currentFileId = null;
+    let allHistory = {};
 
-    // 初始化加载历史列表
+    // 尝试加载 localStorage
+    try {
+        allHistory = JSON.parse(localStorage.getItem('csv_history_v2') || '{}');
+    } catch(e) {
+        allHistory = {};
+    }
+
     renderHistoryList();
+
+    // === 智能列猜测 ===
+    function guessMapping(columns) {
+        const lower = columns.map(c => c.toLowerCase());
+        const find = (keywords) => {
+            for (const kw of keywords) {
+                const idx = lower.findIndex(c => c.includes(kw));
+                if (idx !== -1) return columns[idx];
+            }
+            return '';
+        };
+
+        // Notion 导出的 Name / 名称 通常是第一列
+        let titleCol = find(['name', '名称', '标题', 'title']);
+        if (!titleCol && columns.length > 0) titleCol = columns[0];
+
+        let dateCol = find(['created', '创建', 'date', '日期', '时间', 'time', 'updated', '修改']);
+        let tagCol = find(['tag', '标签', '领域', 'category', '分类', 'type', '类型', 'domain', '用途']);
+        let linkCol = find(['url', 'link', '链接', '网址', 'href']);
+        let filterCol = tagCol; // 默认用标签列做筛选
+
+        return { title: titleCol, date: dateCol, tag: tagCol, link: linkCol, filter: filterCol };
+    }
+
+    function buildSelectOptions(selectEl, columns, selectedValue, includeNone) {
+        selectEl.innerHTML = '';
+        if (includeNone) {
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = '（无）';
+            selectEl.appendChild(opt);
+        }
+        columns.forEach(col => {
+            const opt = document.createElement('option');
+            opt.value = col;
+            opt.textContent = col;
+            if (col === selectedValue) opt.selected = true;
+            selectEl.appendChild(opt);
+        });
+    }
+
+    function getMapping() {
+        return {
+            title: document.getElementById('mapTitle').value,
+            date: document.getElementById('mapDate').value,
+            tag: document.getElementById('mapTag').value,
+            link: document.getElementById('mapLink').value,
+            filter: document.getElementById('mapFilter').value,
+        };
+    }
+
+    function saveMappingAndRender() {
+        if (currentFileId && allHistory[currentFileId]) {
+            allHistory[currentFileId].mapping = getMapping();
+            saveToLocal();
+        }
+        updateFilterOptions();
+        renderGallery();
+    }
+
+    function toggleMapping() {
+        const panel = document.getElementById('mappingPanel');
+        panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+    }
+
+    function updateFilterOptions() {
+        const mapping = getMapping();
+        const filterSelect = document.getElementById('filterSelect');
+        filterSelect.innerHTML = '<option value="">全部</option>';
+        if (mapping.filter) {
+            const values = [...new Set(currentData.flatMap(row => {
+                const val = row[mapping.filter];
+                if (!val) return [];
+                // Notion 多选导出为逗号分隔
+                return val.split(',').map(v => v.trim()).filter(Boolean);
+            }))].sort();
+            values.forEach(v => {
+                const opt = document.createElement('option');
+                opt.value = v;
+                opt.textContent = v;
+                filterSelect.appendChild(opt);
+            });
+        }
+    }
+
+    // === 文件管理 ===
+    function saveToLocal() {
+        try {
+            localStorage.setItem('csv_history_v2', JSON.stringify(allHistory));
+        } catch(e) {
+            alert('存储空间已满，请删除一些历史记录后重试');
+        }
+    }
+
+    function renderHistoryList() {
+        const list = document.getElementById('historyList');
+        list.innerHTML = '';
+        Object.keys(allHistory).sort((a,b) => b.split('_')[1] - a.split('_')[1]).forEach(id => {
+            const item = document.createElement('div');
+            item.className = 'history-item' + (id === currentFileId ? ' active' : '');
+            item.innerHTML = `
+                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:160px;" title="${allHistory[id].name}">📄 ${allHistory[id].name}</span>
+                <span class="delete-btn" onclick="deleteFile(event, '${id}')">✕</span>
+            `;
+            item.onclick = (e) => { if (!e.target.classList.contains('delete-btn')) loadFile(id); };
+            list.appendChild(item);
+        });
+    }
+
+    function deleteFile(e, id) {
+        e.stopPropagation();
+        if (confirm('确定删除该历史记录吗？')) {
+            delete allHistory[id];
+            saveToLocal();
+            if (id === currentFileId) {
+                currentFileId = null;
+                currentData = [];
+                currentColumns = [];
+                document.getElementById('topBar').style.display = 'none';
+                document.getElementById('gallery').innerHTML = '<div class="empty-view"><h3>👋 欢迎使用</h3><p>导入任意 Notion 导出的 CSV 文件即可浏览</p></div>';
+            }
+            renderHistoryList();
+        }
+    }
 
     document.getElementById('fileInput').addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (!file) return;
-
         Papa.parse(file, {
             header: true,
             skipEmptyLines: true,
             complete: function(results) {
-                const fileName = file.name;
                 const fileId = 'id_' + Date.now();
-                
-                // 保存到本地存储
+                const columns = results.meta.fields || [];
                 allHistory[fileId] = {
-                    name: fileName,
+                    name: file.name,
                     data: results.data,
+                    columns: columns,
+                    mapping: guessMapping(columns),
                     time: new Date().toLocaleString()
                 };
                 saveToLocal();
@@ -142,96 +314,153 @@
                 loadFile(fileId);
             }
         });
+        this.value = ''; // 允许重复导入相同文件
     });
 
-    function saveToLocal() {
-        localStorage.setItem('csv_history', JSON.stringify(allHistory));
-    }
-
-    function renderHistoryList() {
-        const list = document.getElementById('historyList');
-        list.innerHTML = '';
-        
-        Object.keys(allHistory).sort((a,b) => b.split('_')[1] - a.split('_')[1]).forEach(id => {
-            const item = document.createElement('div');
-            item.className = 'history-item';
-            item.innerHTML = `
-                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:160px;">📄 ${allHistory[id].name}</span>
-                <span class="delete-btn" onclick="deleteFile(event, '${id}')">✕</span>
-            `;
-            item.onclick = () => loadFile(id);
-            list.appendChild(item);
-        });
-    }
-
-    function deleteFile(e, id) {
-        e.stopPropagation();
-        if(confirm('确定删除该历史记录吗？')) {
-            delete allHistory[id];
-            saveToLocal();
-            renderHistoryList();
-            location.reload(); // 刷新以清空当前视图
-        }
-    }
-
     function loadFile(id) {
-        const fileRecord = allHistory[id];
-        if (!fileRecord) return;
+        const record = allHistory[id];
+        if (!record) return;
+        currentFileId = id;
+        currentData = record.data;
+        currentColumns = record.columns || (record.data.length > 0 ? Object.keys(record.data[0]) : []);
 
-        currentData = fileRecord.data;
-        document.getElementById('currentFileName').innerText = fileRecord.name;
+        // 若旧记录无 mapping，补上
+        if (!record.mapping) {
+            record.mapping = guessMapping(currentColumns);
+            saveToLocal();
+        }
+        const mapping = record.mapping;
+
+        document.getElementById('currentFileName').innerText = record.name;
+        document.getElementById('recordCount').innerText = `共 ${currentData.length} 条记录 · ${currentColumns.length} 列`;
         document.getElementById('topBar').style.display = 'block';
-        
-        // 更新侧边栏高亮
-        document.querySelectorAll('.history-item').forEach(el => el.classList.remove('active'));
-        event?.currentTarget?.classList?.add('active');
+        document.getElementById('searchInput').value = '';
 
-        // 初始化筛选器
-        const domains = [...new Set(currentData.map(i => i['领域']).filter(Boolean))];
-        const filter = document.getElementById('domainFilter');
-        filter.innerHTML = '<option value="">所有领域</option>' + domains.map(d => `<option value="${d}">${d}</option>`).join('');
+        // 填充映射下拉
+        buildSelectOptions(document.getElementById('mapTitle'), currentColumns, mapping.title, true);
+        buildSelectOptions(document.getElementById('mapDate'), currentColumns, mapping.date, true);
+        buildSelectOptions(document.getElementById('mapTag'), currentColumns, mapping.tag, true);
+        buildSelectOptions(document.getElementById('mapLink'), currentColumns, mapping.link, true);
+        buildSelectOptions(document.getElementById('mapFilter'), currentColumns, mapping.filter, true);
 
+        updateFilterOptions();
+        renderHistoryList();
         renderGallery();
     }
 
-    // 监听搜索和筛选
-    document.querySelectorAll('.search-box, .btn').forEach(el => {
-        el.addEventListener('input', renderGallery);
-    });
+    // === 搜索 / 筛选 / 排序 ===
+    document.getElementById('searchInput').addEventListener('input', renderGallery);
+    document.getElementById('filterSelect').addEventListener('change', renderGallery);
+    document.getElementById('sortOrder').addEventListener('change', renderGallery);
 
     function renderGallery() {
+        const mapping = getMapping();
         const search = document.getElementById('searchInput').value.toLowerCase();
-        const domain = document.getElementById('domainFilter').value;
+        const filterVal = document.getElementById('filterSelect').value;
         const sort = document.getElementById('sortOrder').value;
 
-        let filtered = currentData.filter(item => {
-            const content = (item['名称'] + item['描述'] + item['领域']).toLowerCase();
-            return content.includes(search) && (!domain || item['领域'] === domain);
+        let filtered = currentData.filter(row => {
+            // 全字段搜索
+            const allText = Object.values(row).join(' ').toLowerCase();
+            if (search && !allText.includes(search)) return false;
+
+            // 筛选
+            if (filterVal && mapping.filter) {
+                const cellVal = (row[mapping.filter] || '');
+                const cellParts = cellVal.split(',').map(v => v.trim());
+                if (!cellParts.includes(filterVal)) return false;
+            }
+            return true;
         });
 
-        filtered.sort((a,b) => {
-            const tA = new Date(a['创建时间'] || a['日期'] || 0);
-            const tB = new Date(b['创建时间'] || b['日期'] || 0);
-            return sort === 'desc' ? tB - tA : tA - tB;
-        });
+        // 排序
+        if (mapping.date) {
+            filtered.sort((a, b) => {
+                const tA = new Date(a[mapping.date] || 0);
+                const tB = new Date(b[mapping.date] || 0);
+                return sort === 'desc' ? tB - tA : tA - tB;
+            });
+        }
+
+        document.getElementById('recordCount').innerText = `显示 ${filtered.length} / ${currentData.length} 条 · ${currentColumns.length} 列`;
 
         const gallery = document.getElementById('gallery');
-        gallery.innerHTML = filtered.map(item => `
-            <div class="card">
-                <div class="card-title">${item['名称'] || '未命名'}</div>
-                <div style="font-size:12px; color:#888; margin-bottom:10px;">
-                    ${item['创建时间'] || item['日期'] || ''}
+        if (filtered.length === 0) {
+            gallery.innerHTML = '<div class="empty-view"><p>没有匹配的记录</p></div>';
+            return;
+        }
+
+        gallery.innerHTML = filtered.map(row => {
+            const title = mapping.title ? (row[mapping.title] || '未命名') : Object.values(row)[0] || '未命名';
+            const date = mapping.date ? row[mapping.date] : '';
+            const link = mapping.link ? row[mapping.link] : '';
+
+            // 标签（支持多选逗号分隔）
+            let tagsHtml = '';
+            if (mapping.tag && row[mapping.tag]) {
+                tagsHtml = row[mapping.tag].split(',').map(t => t.trim()).filter(Boolean)
+                    .map(t => `<span class="tag tag-select">${escapeHtml(t)}</span>`).join('');
+            }
+
+            // 其余字段
+            const skipCols = new Set([mapping.title, mapping.date, mapping.tag, mapping.link].filter(Boolean));
+            const otherFields = currentColumns.filter(c => !skipCols.has(c) && row[c]);
+
+            let fieldsHtml = otherFields.slice(0, 5).map(col => {
+                let val = row[col];
+                if (!val) return '';
+                // 检测 URL
+                if (/^https?:\/\//i.test(val)) {
+                    return `<div class="card-field"><span class="card-field-label">${escapeHtml(col)}：</span><a href="${escapeHtml(val)}" target="_blank" style="color:var(--accent-blue); text-decoration:none;">${escapeHtml(val.length > 50 ? val.slice(0, 50) + '...' : val)}</a></div>`;
+                }
+                // 长文本截断
+                const display = val.length > 120 ? val.slice(0, 120) + '…' : val;
+                return `<div class="card-field"><span class="card-field-label">${escapeHtml(col)}：</span>${escapeHtml(display)}</div>`;
+            }).join('');
+
+            if (otherFields.length > 5) {
+                fieldsHtml += `<div class="card-field" style="color:#bbb; font-size:12px;">还有 ${otherFields.length - 5} 个字段...</div>`;
+            }
+
+            return `
+                <div class="card">
+                    <div class="card-title">${escapeHtml(title)}</div>
+                    ${date ? `<div class="card-meta">${escapeHtml(date)}</div>` : ''}
+                    ${tagsHtml ? `<div class="card-tags">${tagsHtml}</div>` : ''}
+                    ${fieldsHtml}
+                    ${link ? `<a class="card-link" href="${escapeHtml(link)}" target="_blank">查看链接 ↗</a>` : ''}
                 </div>
-                <div>
-                    ${item['领域'] ? `<span class="tag" style="background:#e7f3ff; color:#0b67c2">${item['领域']}</span>` : ''}
-                    ${item['用途'] ? `<span class="tag">${item['用途']}</span>` : ''}
-                </div>
-                <div style="font-size:14px; color:#666; margin-top:12px; line-height:1.5;">
-                    ${item['描述'] || ''}
-                </div>
-                ${item['链接'] ? `<a href="${item['链接']}" target="_blank" style="margin-top:auto; padding-top:15px; font-size:12px; color:#2383e2; text-decoration:none;">查看原文 ↗</a>` : ''}
-            </div>
-        `).join('');
+            `;
+        }).join('');
+    }
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    function exportCurrentView() {
+        const mapping = getMapping();
+        const search = document.getElementById('searchInput').value.toLowerCase();
+        const filterVal = document.getElementById('filterSelect').value;
+
+        let filtered = currentData.filter(row => {
+            const allText = Object.values(row).join(' ').toLowerCase();
+            if (search && !allText.includes(search)) return false;
+            if (filterVal && mapping.filter) {
+                const cellParts = (row[mapping.filter] || '').split(',').map(v => v.trim());
+                if (!cellParts.includes(filterVal)) return false;
+            }
+            return true;
+        });
+
+        const csv = Papa.unparse(filtered);
+        const blob = new Blob(['\\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'filtered_export.csv';
+        a.click();
     }
 </script>
 </body>
