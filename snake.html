@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<meta name="color-scheme" content="light dark" />
+	<title>Snake</title>
+	<link rel="icon" type="image/svg+xml" href="favicon.svg" />
+	<style>
+		:root{
+			--bg: #ffffff;
+			--panel: #fbfbfa;
+			--text: #37352f;
+			--muted: #787774;
+			--border: rgba(55, 53, 47, 0.16);
+			--grid: rgba(55, 53, 47, 0.08);
+			--accent: #2383e2;
+			--accent-soft: rgba(35, 131, 226, 0.12);
+			--snake: #2f7d32;
+			--food: #d9485f;
+			--shadow: 0 8px 24px rgba(15, 15, 15, 0.08);
+			--radius: 14px;
+		}
+
+		@media (prefers-color-scheme: dark){
+			:root{
+				--bg: #191919;
+				--panel: #222222;
+				--text: rgba(255,255,255,0.9);
+				--muted: rgba(255,255,255,0.65);
+				--border: rgba(255,255,255,0.14);
+				--grid: rgba(255,255,255,0.08);
+				--accent: #4ea1ff;
+				--accent-soft: rgba(78, 161, 255, 0.14);
+				--snake: #62c462;
+				--food: #ff6b81;
+				--shadow: 0 10px 30px rgba(0,0,0,0.45);
+			}
+		}
+
+		*{ box-sizing: border-box; }
+
+		body{
+			margin: 0;
+			font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+			background: var(--bg);
+			color: var(--text);
+			min-height: 100vh;
+		}
+
+		a{ color: inherit; }
+
+		.page{
+			max-width: 980px;
+			margin: 0 auto;
+			padding: 40px 20px 56px;
+		}
+
+		.page-header{
+			display: flex;
+			justify-content: space-between;
+			align-items: flex-start;
+			gap: 16px;
+			margin-bottom: 24px;
+		}
+
+		.page-header h1{
+			font-size: 32px;
+			line-height: 1.15;
+			margin: 0 0 8px;
+			letter-spacing: -0.02em;
+		}
+
+		.page-header p{
+			margin: 0;
+			color: var(--muted);
+			line-height: 1.6;
+			font-size: 14px;
+		}
+
+		.back-link{
+			text-decoration: none;
+			font-size: 14px;
+			color: var(--accent);
+			white-space: nowrap;
+		}
+
+		.layout{
+			display: grid;
+			grid-template-columns: minmax(0, 1fr) 260px;
+			gap: 20px;
+			align-items: start;
+		}
+
+		.panel{
+			background: var(--panel);
+			border: 1px solid var(--border);
+			border-radius: var(--radius);
+			box-shadow: var(--shadow);
+		}
+
+		.board-panel{
+			padding: 18px;
+		}
+
+		.stats{
+			display: grid;
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			gap: 12px;
+			margin-bottom: 16px;
+		}
+
+		.stat{
+			padding: 14px;
+			border: 1px solid var(--border);
+			border-radius: 12px;
+			background: var(--bg);
+		}
+
+		.stat-label{
+			display: block;
+			font-size: 12px;
+			color: var(--muted);
+			margin-bottom: 6px;
+		}
+
+		.stat-value{
+			font-size: 20px;
+			font-weight: 680;
+		}
+
+		.game-board{
+			display: grid;
+			grid-template-columns: repeat(16, minmax(0, 1fr));
+			aspect-ratio: 1;
+			border: 1px solid var(--border);
+			border-radius: 12px;
+			overflow: hidden;
+			background-image:
+				linear-gradient(to right, var(--grid) 1px, transparent 1px),
+				linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+			background-size: calc(100% / 16) calc(100% / 16);
+			background-color: var(--bg);
+		}
+
+		.cell{
+			border-radius: 4px;
+			margin: 3px;
+			background: transparent;
+		}
+
+		.cell.snake{
+			background: var(--snake);
+		}
+
+		.cell.head{
+			box-shadow: inset 0 0 0 2px rgba(255,255,255,0.28);
+		}
+
+		.cell.food{
+			background: var(--food);
+		}
+
+		.sidebar{
+			padding: 18px;
+		}
+
+		.button-row,
+		.controls-grid{
+			display: grid;
+			gap: 10px;
+		}
+
+		.button-row{
+			grid-template-columns: 1fr 1fr;
+			margin-bottom: 18px;
+		}
+
+		button{
+			font: inherit;
+			border: 1px solid var(--border);
+			border-radius: 12px;
+			padding: 11px 14px;
+			background: var(--bg);
+			color: var(--text);
+			cursor: pointer;
+		}
+
+		button.primary{
+			background: var(--accent);
+			color: #ffffff;
+			border-color: transparent;
+		}
+
+		button:focus-visible{
+			outline: 3px solid var(--accent-soft);
+			outline-offset: 1px;
+		}
+
+		.status{
+			padding: 14px;
+			border-radius: 12px;
+			background: var(--bg);
+			border: 1px solid var(--border);
+			color: var(--muted);
+			font-size: 14px;
+			line-height: 1.5;
+			margin-bottom: 18px;
+			min-height: 74px;
+		}
+
+		.controls-title{
+			font-size: 13px;
+			font-weight: 650;
+			margin: 0 0 10px;
+		}
+
+		.controls-grid{
+			grid-template-columns: repeat(3, 1fr);
+		}
+
+		.controls-grid button{
+			min-height: 54px;
+		}
+
+		.controls-grid .spacer{
+			visibility: hidden;
+		}
+
+		.help{
+			margin-top: 18px;
+			font-size: 13px;
+			color: var(--muted);
+			line-height: 1.6;
+		}
+
+		@media (max-width: 800px){
+			.layout{
+				grid-template-columns: 1fr;
+			}
+
+			.page-header{
+				flex-direction: column;
+			}
+		}
+
+		@media (max-width: 520px){
+			.page{
+				padding: 24px 14px 40px;
+			}
+
+			.page-header h1{
+				font-size: 28px;
+			}
+
+			.stats{
+				grid-template-columns: 1fr;
+			}
+		}
+	</style>
+</head>
+<body>
+	<div class="page">
+		<header class="page-header">
+			<div>
+				<h1>Snake</h1>
+				<p>经典贪吃蛇：吃到食物得分并变长，撞墙或撞到自己则结束。支持键盘与屏幕按钮控制。</p>
+			</div>
+			<a class="back-link" href="index.html">← 返回工具列表</a>
+		</header>
+
+		<div class="layout">
+			<section class="panel board-panel">
+				<div class="stats">
+					<div class="stat">
+						<span class="stat-label">分数</span>
+						<strong class="stat-value" id="score">0</strong>
+					</div>
+					<div class="stat">
+						<span class="stat-label">长度</span>
+						<strong class="stat-value" id="length">3</strong>
+					</div>
+					<div class="stat">
+						<span class="stat-label">状态</span>
+						<strong class="stat-value" id="state-label">进行中</strong>
+					</div>
+				</div>
+
+				<div id="game-board" class="game-board" aria-label="Snake game board" role="grid"></div>
+			</section>
+
+			<aside class="panel sidebar">
+				<div class="button-row">
+					<button class="primary" id="restart-button" type="button">重新开始</button>
+					<button id="pause-button" type="button">暂停</button>
+				</div>
+
+				<div class="status" id="status-message">按方向键或 WASD 开始移动。</div>
+
+				<p class="controls-title">屏幕控制</p>
+				<div class="controls-grid">
+					<div class="spacer" aria-hidden="true"></div>
+					<button type="button" data-direction="up" aria-label="向上">↑</button>
+					<div class="spacer" aria-hidden="true"></div>
+					<button type="button" data-direction="left" aria-label="向左">←</button>
+					<button type="button" data-direction="down" aria-label="向下">↓</button>
+					<button type="button" data-direction="right" aria-label="向右">→</button>
+				</div>
+
+				<div class="help">
+					<div>键盘：`↑ ↓ ← →` 或 `W A S D`</div>
+					<div>空格：暂停 / 继续</div>
+					<div>`R`：重新开始</div>
+				</div>
+			</aside>
+		</div>
+	</div>
+
+	<script type="module">
+		import {
+			DIRECTIONS,
+			createInitialState,
+			queueDirection,
+			stepGame,
+			togglePause,
+		} from "./snake-game.mjs";
+
+		const TICK_MS = 140;
+		const boardElement = document.getElementById("game-board");
+		const scoreElement = document.getElementById("score");
+		const lengthElement = document.getElementById("length");
+		const stateLabelElement = document.getElementById("state-label");
+		const statusElement = document.getElementById("status-message");
+		const pauseButton = document.getElementById("pause-button");
+		const restartButton = document.getElementById("restart-button");
+		const cells = [];
+		let state = createInitialState();
+
+		function randomValue(){
+			return Math.random();
+		}
+
+		function buildBoard(){
+			const fragment = document.createDocumentFragment();
+
+			for (let index = 0; index < state.cols * state.rows; index += 1){
+				const cell = document.createElement("div");
+				cell.className = "cell";
+				cell.setAttribute("role", "gridcell");
+				cells.push(cell);
+				fragment.appendChild(cell);
+			}
+
+			boardElement.replaceChildren(fragment);
+		}
+
+		function indexFor(x, y){
+			return y * state.cols + x;
+		}
+
+		function render(){
+			for (const cell of cells){
+				cell.className = "cell";
+			}
+
+			for (let i = 0; i < state.snake.length; i += 1){
+				const segment = state.snake[i];
+				const cell = cells[indexFor(segment.x, segment.y)];
+				if (cell){
+					cell.classList.add("snake");
+					if (i === 0){
+						cell.classList.add("head");
+					}
+				}
+			}
+
+			if (state.food){
+				const foodCell = cells[indexFor(state.food.x, state.food.y)];
+				if (foodCell){
+					foodCell.classList.add("food");
+				}
+			}
+
+			scoreElement.textContent = String(state.score);
+			lengthElement.textContent = String(state.snake.length);
+			stateLabelElement.textContent = state.isGameOver ? "结束" : (state.isPaused ? "暂停中" : "进行中");
+			pauseButton.textContent = state.isPaused ? "继续" : "暂停";
+
+			if (state.isGameOver){
+				statusElement.textContent = `游戏结束，最终得分 ${state.score}。按重新开始或 R 再来一局。`;
+			} else if (state.isPaused){
+				statusElement.textContent = "游戏已暂停，按空格或继续按钮恢复。";
+			} else {
+				statusElement.textContent = "按方向键或 WASD 控制方向，吃到红点会变长。";
+			}
+		}
+
+		function setDirection(direction){
+			state = queueDirection(state, direction);
+			render();
+		}
+
+		function resetGame(){
+			state = createInitialState();
+			render();
+		}
+
+		function handleKeydown(event){
+			const key = event.key.toLowerCase();
+			const directionByKey = {
+				arrowup: DIRECTIONS.up,
+				w: DIRECTIONS.up,
+				arrowdown: DIRECTIONS.down,
+				s: DIRECTIONS.down,
+				arrowleft: DIRECTIONS.left,
+				a: DIRECTIONS.left,
+				arrowright: DIRECTIONS.right,
+				d: DIRECTIONS.right,
+			};
+
+			if (directionByKey[key]){
+				event.preventDefault();
+				setDirection(directionByKey[key]);
+				return;
+			}
+
+			if (key === " " || key === "spacebar"){
+				event.preventDefault();
+				state = togglePause(state);
+				render();
+				return;
+			}
+
+			if (key === "r"){
+				event.preventDefault();
+				resetGame();
+			}
+		}
+
+		document.addEventListener("keydown", handleKeydown);
+
+		for (const button of document.querySelectorAll("[data-direction]")){
+			button.addEventListener("click", () => {
+				setDirection(DIRECTIONS[button.dataset.direction]);
+			});
+		}
+
+		restartButton.addEventListener("click", resetGame);
+		pauseButton.addEventListener("click", () => {
+			state = togglePause(state);
+			render();
+		});
+
+		buildBoard();
+		render();
+
+		window.setInterval(() => {
+			state = stepGame(state, randomValue());
+			render();
+		}, TICK_MS);
+	</script>
+</body>
+</html>
