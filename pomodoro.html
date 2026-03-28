@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>番茄钟 | Fluent UI</title>
+	<style>
+		:root {
+			--bg-top: #edf3ff;
+			--bg-bottom: #f8fbff;
+			--panel: rgba(255, 255, 255, 0.86);
+			--text-main: #1b1f23;
+			--text-subtle: #5b636e;
+			--accent: #0f6cbd;
+			--accent-soft: #d9e9ff;
+			--danger: #c4314b;
+		}
+
+		* {
+			box-sizing: border-box;
+		}
+
+		body {
+			margin: 0;
+			min-height: 100vh;
+			font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+			color: var(--text-main);
+			background:
+				radial-gradient(circle at 15% 15%, #c9e3ff 0, transparent 45%),
+				radial-gradient(circle at 88% 8%, #d8d2ff 0, transparent 32%),
+				linear-gradient(160deg, var(--bg-top), var(--bg-bottom));
+			display: grid;
+			place-items: center;
+			padding: 24px;
+		}
+
+		main {
+			width: min(100%, 860px);
+		}
+
+		fluent-card {
+			padding: 24px;
+			border-radius: 18px;
+			background: var(--panel);
+			backdrop-filter: blur(10px);
+			box-shadow: 0 16px 48px rgba(0, 22, 66, 0.12);
+		}
+
+		.header {
+			display: flex;
+			justify-content: space-between;
+			align-items: center;
+			gap: 12px;
+			flex-wrap: wrap;
+		}
+
+		.title {
+			margin: 0;
+			font-size: clamp(24px, 4vw, 34px);
+			letter-spacing: 0.01em;
+		}
+
+		.subtle {
+			margin: 6px 0 0;
+			color: var(--text-subtle);
+			font-size: 14px;
+		}
+
+		.mode-row {
+			display: flex;
+			gap: 10px;
+			margin: 20px 0;
+			flex-wrap: wrap;
+		}
+
+		.mode-btn {
+			flex: 1 1 150px;
+		}
+
+		.mode-btn[appearance="accent"] {
+			font-weight: 600;
+		}
+
+		.time-wrap {
+			margin-top: 8px;
+			padding: 18px;
+			border-radius: 16px;
+			background: linear-gradient(135deg, #ffffff, #eff5ff);
+			border: 1px solid #d7e5f8;
+			text-align: center;
+		}
+
+		.timer-text {
+			font-size: clamp(54px, 11vw, 88px);
+			font-weight: 700;
+			line-height: 1;
+			letter-spacing: 0.05em;
+			margin: 12px 0;
+			font-variant-numeric: tabular-nums;
+		}
+
+		.status {
+			font-size: 15px;
+			color: var(--text-subtle);
+		}
+
+		.progress-row {
+			margin-top: 14px;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			gap: 10px;
+			color: var(--text-subtle);
+			font-size: 13px;
+		}
+
+		.controls {
+			margin-top: 18px;
+			display: flex;
+			gap: 10px;
+			justify-content: center;
+			flex-wrap: wrap;
+		}
+
+		.config-grid {
+			margin-top: 18px;
+			display: grid;
+			grid-template-columns: repeat(3, minmax(0, 1fr));
+			gap: 10px;
+		}
+
+		.switch-row {
+			margin-top: 14px;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 10px;
+			padding: 10px 12px;
+			border-radius: 10px;
+			background: var(--accent-soft);
+			color: #16304a;
+			font-size: 14px;
+		}
+
+		.meta-row {
+			margin-top: 16px;
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			gap: 10px;
+			flex-wrap: wrap;
+		}
+
+		.badges {
+			display: flex;
+			gap: 8px;
+			flex-wrap: wrap;
+		}
+
+		.helper {
+			margin-top: 10px;
+			font-size: 12px;
+			color: var(--text-subtle);
+		}
+
+		.warning {
+			color: var(--danger);
+			font-weight: 600;
+		}
+
+		@media (max-width: 720px) {
+			fluent-card {
+				padding: 16px;
+			}
+
+			.config-grid {
+				grid-template-columns: 1fr;
+			}
+
+			.switch-row {
+				align-items: flex-start;
+			}
+		}
+	</style>
+</head>
+<body>
+	<main>
+		<fluent-card>
+			<div class="header">
+				<div>
+					<h1 class="title">番茄钟</h1>
+					<p class="subtle">Fluent UI Web Components 实现</p>
+				</div>
+				<fluent-badge id="modeBadge" appearance="accent">工作</fluent-badge>
+			</div>
+
+			<div class="mode-row" role="tablist" aria-label="计时模式">
+				<fluent-button id="modeFocus" class="mode-btn" appearance="accent">工作</fluent-button>
+				<fluent-button id="modeShortBreak" class="mode-btn">短休息</fluent-button>
+				<fluent-button id="modeLongBreak" class="mode-btn">长休息</fluent-button>
+			</div>
+
+			<div class="time-wrap">
+				<div id="timerText" class="timer-text" aria-live="polite">25:00</div>
+				<div id="statusText" class="status">准备开始专注</div>
+				<div class="progress-row">
+					<fluent-progress-ring id="progressRing" min="0" max="100" value="0"></fluent-progress-ring>
+					<span id="progressLabel">0% 完成</span>
+				</div>
+			</div>
+
+			<div class="controls">
+				<fluent-button id="toggleBtn" appearance="accent">开始</fluent-button>
+				<fluent-button id="resetBtn">重置</fluent-button>
+				<fluent-button id="nextBtn">下一阶段</fluent-button>
+			</div>
+
+			<fluent-divider role="separator"></fluent-divider>
+
+			<div class="config-grid">
+				<fluent-number-field id="focusMinutes" min="1" max="180" value="25">工作时长（分钟）</fluent-number-field>
+				<fluent-number-field id="shortBreakMinutes" min="1" max="60" value="5">短休息（分钟）</fluent-number-field>
+				<fluent-number-field id="longBreakMinutes" min="1" max="90" value="15">长休息（分钟）</fluent-number-field>
+			</div>
+
+			<div class="switch-row">
+				<span>阶段结束后自动开始下一阶段</span>
+				<fluent-switch id="autoStartSwitch"></fluent-switch>
+			</div>
+
+			<div class="meta-row">
+				<div class="badges">
+					<fluent-badge id="cycleBadge">完成番茄：0</fluent-badge>
+					<fluent-badge id="streakBadge">当前连胜：0</fluent-badge>
+				</div>
+				<fluent-button id="resetStatsBtn" size="small">重置统计</fluent-button>
+			</div>
+
+			<p id="helperText" class="helper">提示：修改时长后会自动重置当前阶段。</p>
+		</fluent-card>
+	</main>
+
+	<script type="module">
+		import {
+			provideFluentDesignSystem,
+			fluentBadge,
+			fluentButton,
+			fluentCard,
+			fluentDivider,
+			fluentNumberField,
+			fluentProgressRing,
+			fluentSwitch,
+		} from "https://unpkg.com/@fluentui/web-components@2.6.1/dist/web-components.min.js";
+
+		provideFluentDesignSystem().register(
+			fluentBadge(),
+			fluentButton(),
+			fluentCard(),
+			fluentDivider(),
+			fluentNumberField(),
+			fluentProgressRing(),
+			fluentSwitch()
+		);
+
+		const STORAGE_KEY = "pomodoro_fluent_v1";
+		const MODE = {
+			focus: { label: "工作", next: "shortBreak" },
+			shortBreak: { label: "短休息", next: "focus" },
+			longBreak: { label: "长休息", next: "focus" },
+		};
+
+		const el = {
+			modeBadge: document.getElementById("modeBadge"),
+			modeFocus: document.getElementById("modeFocus"),
+			modeShortBreak: document.getElementById("modeShortBreak"),
+			modeLongBreak: document.getElementById("modeLongBreak"),
+			timerText: document.getElementById("timerText"),
+			statusText: document.getElementById("statusText"),
+			progressRing: document.getElementById("progressRing"),
+			progressLabel: document.getElementById("progressLabel"),
+			toggleBtn: document.getElementById("toggleBtn"),
+			resetBtn: document.getElementById("resetBtn"),
+			nextBtn: document.getElementById("nextBtn"),
+			focusMinutes: document.getElementById("focusMinutes"),
+			shortBreakMinutes: document.getElementById("shortBreakMinutes"),
+			longBreakMinutes: document.getElementById("longBreakMinutes"),
+			autoStartSwitch: document.getElementById("autoStartSwitch"),
+			cycleBadge: document.getElementById("cycleBadge"),
+			streakBadge: document.getElementById("streakBadge"),
+			resetStatsBtn: document.getElementById("resetStatsBtn"),
+			helperText: document.getElementById("helperText"),
+		};
+
+		let state = {
+			mode: "focus",
+			autoStart: false,
+			running: false,
+			durationSec: 25 * 60,
+			remainingSec: 25 * 60,
+			focusMinutes: 25,
+			shortBreakMinutes: 5,
+			longBreakMinutes: 15,
+			completedPomodoros: 0,
+			currentStreak: 0,
+			nextEndTime: 0,
+		};
+
+		function toSeconds(minutes) {
+			return Math.max(1, Math.floor(minutes)) * 60;
+		}
+
+		function getDurationForMode(mode) {
+			if (mode === "focus") return toSeconds(state.focusMinutes);
+			if (mode === "shortBreak") return toSeconds(state.shortBreakMinutes);
+			return toSeconds(state.longBreakMinutes);
+		}
+
+		function formatTime(totalSeconds) {
+			const safe = Math.max(0, Math.floor(totalSeconds));
+			const m = String(Math.floor(safe / 60)).padStart(2, "0");
+			const s = String(safe % 60).padStart(2, "0");
+			return `${m}:${s}`;
+		}
+
+		function updateProgress() {
+			const completed = Math.max(0, state.durationSec - state.remainingSec);
+			const ratio = state.durationSec > 0 ? completed / state.durationSec : 0;
+			const percent = Math.min(100, Math.round(ratio * 100));
+			el.progressRing.value = String(percent);
+			el.progressLabel.textContent = `${percent}% 完成`;
+		}
+
+		function updateModeButtons() {
+			const mapping = {
+				focus: el.modeFocus,
+				shortBreak: el.modeShortBreak,
+				longBreak: el.modeLongBreak,
+			};
+			for (const [modeName, button] of Object.entries(mapping)) {
+				button.setAttribute("appearance", modeName === state.mode ? "accent" : "outline");
+			}
+		}
+
+		function updateView() {
+			el.modeBadge.textContent = MODE[state.mode].label;
+			el.timerText.textContent = formatTime(state.remainingSec);
+			el.statusText.textContent = state.running ? `${MODE[state.mode].label}进行中` : `已暂停：${MODE[state.mode].label}`;
+			el.toggleBtn.textContent = state.running ? "暂停" : "开始";
+			el.cycleBadge.textContent = `完成番茄：${state.completedPomodoros}`;
+			el.streakBadge.textContent = `当前连胜：${state.currentStreak}`;
+			el.autoStartSwitch.checked = state.autoStart;
+			updateModeButtons();
+			updateProgress();
+		}
+
+		function persist() {
+			localStorage.setItem(STORAGE_KEY, JSON.stringify({
+				mode: state.mode,
+				autoStart: state.autoStart,
+				focusMinutes: state.focusMinutes,
+				shortBreakMinutes: state.shortBreakMinutes,
+				longBreakMinutes: state.longBreakMinutes,
+				completedPomodoros: state.completedPomodoros,
+				currentStreak: state.currentStreak,
+			}));
+		}
+
+		function loadState() {
+			try {
+				const raw = localStorage.getItem(STORAGE_KEY);
+				if (!raw) return;
+				const saved = JSON.parse(raw);
+				state.mode = saved.mode || "focus";
+				state.autoStart = Boolean(saved.autoStart);
+				state.focusMinutes = Number(saved.focusMinutes) || 25;
+				state.shortBreakMinutes = Number(saved.shortBreakMinutes) || 5;
+				state.longBreakMinutes = Number(saved.longBreakMinutes) || 15;
+				state.completedPomodoros = Number(saved.completedPomodoros) || 0;
+				state.currentStreak = Number(saved.currentStreak) || 0;
+			} catch {
+				// Ignore invalid saved state and continue with defaults.
+			}
+			state.durationSec = getDurationForMode(state.mode);
+			state.remainingSec = state.durationSec;
+		}
+
+		function applyDurationInputs() {
+			el.focusMinutes.value = String(state.focusMinutes);
+			el.shortBreakMinutes.value = String(state.shortBreakMinutes);
+			el.longBreakMinutes.value = String(state.longBreakMinutes);
+		}
+
+		function jumpToMode(mode, announce = true) {
+			state.mode = mode;
+			state.running = false;
+			state.durationSec = getDurationForMode(mode);
+			state.remainingSec = state.durationSec;
+			state.nextEndTime = 0;
+			if (announce) {
+				el.helperText.classList.remove("warning");
+				el.helperText.textContent = `切换到${MODE[mode].label}。`;
+			}
+			updateView();
+			persist();
+		}
+
+		function getValidMinutes(raw, fallback) {
+			const n = Number(raw);
+			if (Number.isFinite(n) && n >= 1) return Math.floor(n);
+			return fallback;
+		}
+
+		function updateDurationsFromInput() {
+			state.focusMinutes = getValidMinutes(el.focusMinutes.value, state.focusMinutes);
+			state.shortBreakMinutes = getValidMinutes(el.shortBreakMinutes.value, state.shortBreakMinutes);
+			state.longBreakMinutes = getValidMinutes(el.longBreakMinutes.value, state.longBreakMinutes);
+			applyDurationInputs();
+			jumpToMode(state.mode, false);
+			el.helperText.classList.remove("warning");
+			el.helperText.textContent = "已更新时长，并重置当前阶段。";
+		}
+
+		function onPhaseComplete() {
+			if (state.mode === "focus") {
+				state.completedPomodoros += 1;
+				state.currentStreak += 1;
+			}
+
+			const nextMode = state.mode === "focus"
+				? (state.completedPomodoros % 4 === 0 ? "longBreak" : "shortBreak")
+				: "focus";
+
+			jumpToMode(nextMode);
+			el.helperText.classList.remove("warning");
+			el.helperText.textContent = `当前阶段完成，已切换到${MODE[nextMode].label}。`;
+
+			if (state.autoStart) {
+				toggleRunning(true);
+			}
+		}
+
+		function tick() {
+			if (!state.running) return;
+			const now = Date.now();
+			const left = Math.ceil((state.nextEndTime - now) / 1000);
+			state.remainingSec = Math.max(0, left);
+			updateView();
+
+			if (state.remainingSec <= 0) {
+				state.running = false;
+				onPhaseComplete();
+				return;
+			}
+
+			requestAnimationFrame(tick);
+		}
+
+		function toggleRunning(forceStart = null) {
+			const shouldStart = forceStart === null ? !state.running : forceStart;
+			state.running = shouldStart;
+
+			if (state.running) {
+				state.nextEndTime = Date.now() + state.remainingSec * 1000;
+				el.helperText.classList.remove("warning");
+				el.helperText.textContent = "计时进行中，继续保持专注。";
+				requestAnimationFrame(tick);
+			} else {
+				el.helperText.classList.remove("warning");
+				el.helperText.textContent = "计时已暂停。";
+			}
+			updateView();
+		}
+
+		function resetCurrentMode() {
+			state.running = false;
+			state.durationSec = getDurationForMode(state.mode);
+			state.remainingSec = state.durationSec;
+			state.nextEndTime = 0;
+			el.helperText.classList.remove("warning");
+			el.helperText.textContent = `已重置${MODE[state.mode].label}阶段。`;
+			updateView();
+		}
+
+		function wireEvents() {
+			el.modeFocus.addEventListener("click", () => jumpToMode("focus"));
+			el.modeShortBreak.addEventListener("click", () => jumpToMode("shortBreak"));
+			el.modeLongBreak.addEventListener("click", () => jumpToMode("longBreak"));
+
+			el.toggleBtn.addEventListener("click", () => toggleRunning());
+			el.resetBtn.addEventListener("click", resetCurrentMode);
+			el.nextBtn.addEventListener("click", onPhaseComplete);
+
+			el.focusMinutes.addEventListener("change", updateDurationsFromInput);
+			el.shortBreakMinutes.addEventListener("change", updateDurationsFromInput);
+			el.longBreakMinutes.addEventListener("change", updateDurationsFromInput);
+
+			el.autoStartSwitch.addEventListener("change", (event) => {
+				state.autoStart = Boolean(event.target.checked);
+				persist();
+				el.helperText.classList.remove("warning");
+				el.helperText.textContent = state.autoStart
+					? "已开启自动切换后自动开始。"
+					: "已关闭自动开始。";
+			});
+
+			el.resetStatsBtn.addEventListener("click", () => {
+				state.completedPomodoros = 0;
+				state.currentStreak = 0;
+				persist();
+				updateView();
+				el.helperText.classList.add("warning");
+				el.helperText.textContent = "统计数据已重置。";
+			});
+		}
+
+		function init() {
+			loadState();
+			applyDurationInputs();
+			wireEvents();
+			updateView();
+		}
+
+		init();
+	</script>
+</body>
+</html>
