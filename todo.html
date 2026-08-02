@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ZenTask - 极简待办管理</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com/3.4.17"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
@@ -102,10 +102,10 @@
 
         <!-- Task List Filters -->
         <div class="flex gap-4 mb-4 overflow-x-auto pb-2 custom-scrollbar">
-            <button onclick="filterTasks('all')" class="filter-btn active px-4 py-2 rounded-full bg-indigo-100 text-indigo-700 text-sm font-medium">全部</button>
-            <button onclick="filterTasks('high')" class="filter-btn px-4 py-2 rounded-full bg-white text-slate-600 border border-slate-200 text-sm hover:border-indigo-300">紧急重要</button>
-            <button onclick="filterTasks('medium')" class="filter-btn px-4 py-2 rounded-full bg-white text-slate-600 border border-slate-200 text-sm hover:border-indigo-300">普通任务</button>
-            <button onclick="filterTasks('low')" class="filter-btn px-4 py-2 rounded-full bg-white text-slate-600 border border-slate-200 text-sm hover:border-indigo-300">琐碎闲事</button>
+            <button onclick="filterTasks('all', event)" class="filter-btn active px-4 py-2 rounded-full bg-indigo-100 text-indigo-700 text-sm font-medium">全部</button>
+            <button onclick="filterTasks('high', event)" class="filter-btn px-4 py-2 rounded-full bg-white text-slate-600 border border-slate-200 text-sm hover:border-indigo-300">紧急重要</button>
+            <button onclick="filterTasks('medium', event)" class="filter-btn px-4 py-2 rounded-full bg-white text-slate-600 border border-slate-200 text-sm hover:border-indigo-300">普通任务</button>
+            <button onclick="filterTasks('low', event)" class="filter-btn px-4 py-2 rounded-full bg-white text-slate-600 border border-slate-200 text-sm hover:border-indigo-300">琐碎闲事</button>
         </div>
 
         <!-- Empty State -->
@@ -121,23 +121,33 @@
 
         <!-- Action Bar -->
         <div class="mt-8 flex justify-between items-center text-sm text-slate-400">
-            <p>提示：点击任务即可标记完成</p>
+            <p>提示：点击任务或按 Enter 键标记完成</p>
             <button onclick="clearCompleted()" class="hover:text-red-500 transition-colors">清除已完成</button>
         </div>
     </div>
 
     <!-- Simple Custom Modal for Alerts -->
-    <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="modal-title">
         <div class="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
             <h3 id="modal-title" class="text-lg font-bold mb-2">提示</h3>
             <p id="modal-msg" class="text-slate-600 mb-6"></p>
-            <button onclick="closeModal()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-medium">知道了</button>
+            <button id="modal-close" onclick="closeModal()" class="w-full bg-indigo-600 text-white py-3 rounded-xl font-medium">知道了</button>
         </div>
     </div>
 
     <script>
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
         let tasks = JSON.parse(localStorage.getItem('zen_tasks')) || [];
         let currentFilter = 'all';
+        let lastFocused = null;
 
         // Initialize
         window.onload = () => {
@@ -147,14 +157,24 @@
         };
 
         function showModal(title, msg) {
+            lastFocused = document.activeElement;
             document.getElementById('modal-title').innerText = title;
             document.getElementById('modal-msg').innerText = msg;
             document.getElementById('modal').classList.remove('hidden');
+            document.getElementById('modal-close').focus();
         }
 
         function closeModal() {
             document.getElementById('modal').classList.add('hidden');
+            if (lastFocused && lastFocused.focus) lastFocused.focus();
         }
+
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                const modal = document.getElementById('modal');
+                if (!modal.classList.contains('hidden')) closeModal();
+            }
+        });
 
         function addTask() {
             const input = document.getElementById('task-input');
@@ -192,14 +212,14 @@
             saveAndRender();
         }
 
-        function filterTasks(filter) {
+        function filterTasks(filter, ev) {
             currentFilter = filter;
             document.querySelectorAll('.filter-btn').forEach(btn => {
                 btn.classList.remove('bg-indigo-100', 'text-indigo-700', 'active');
                 btn.classList.add('bg-white', 'text-slate-600', 'border-slate-200');
             });
-            event.target.classList.add('bg-indigo-100', 'text-indigo-700', 'active');
-            event.target.classList.remove('bg-white', 'text-slate-600', 'border-slate-200');
+            ev.target.classList.add('bg-indigo-100', 'text-indigo-700', 'active');
+            ev.target.classList.remove('bg-white', 'text-slate-600', 'border-slate-200');
             renderTasks();
         }
 
@@ -249,16 +269,25 @@
                     const div = document.createElement('div');
                     div.className = `task-card bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex items-center gap-4 cursor-pointer priority-${task.priority} ${task.completed ? 'opacity-60' : ''}`;
                     div.onclick = () => toggleTask(task.id);
+                    div.setAttribute('role', 'button');
+                    div.setAttribute('tabindex', '0');
+                    div.setAttribute('aria-label', `任务：${task.text}，${task.completed ? '已完成' : '未完成'}，点击或按 Enter 切换`);
+                    div.onkeydown = (e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault();
+                            toggleTask(task.id);
+                        }
+                    };
                     
                     div.innerHTML = `
                         <div class="w-6 h-6 rounded-full border-2 border-slate-200 flex items-center justify-center transition-all ${task.completed ? 'bg-indigo-500 border-indigo-500' : ''}">
                             ${task.completed ? '<i class="fas fa-check text-white text-xs"></i>' : ''}
                         </div>
                         <div class="flex-1">
-                            <p class="font-medium ${task.completed ? 'line-through text-slate-400' : 'text-slate-800'}">${task.text}</p>
+                            <p class="font-medium ${task.completed ? 'line-through text-slate-400' : 'text-slate-800'}">${escapeHtml(task.text)}</p>
                             <span class="text-[10px] uppercase tracking-wider font-bold ${priorityColors[task.priority]}">${priorityLabels[task.priority]}</span>
                         </div>
-                        <button onclick="deleteTask(${task.id}, event)" class="p-2 text-slate-300 hover:text-red-500 transition-colors">
+                        <button onclick="deleteTask(${task.id}, event)" aria-label="删除任务：${escapeHtml(task.text)}" class="p-2 text-slate-300 hover:text-red-500 transition-colors">
                             <i class="far fa-trash-alt"></i>
                         </button>
                     `;

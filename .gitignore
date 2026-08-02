@@ -65,3 +65,6 @@ temp/
 
 # OS generated files
 **/__MACOSX/**
+
+# Reasonix agent state
+.reasonix/

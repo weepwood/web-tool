@@ -154,7 +154,9 @@
         </div>
     </div>
 
-<script>
+<script type="module">
+    import { guessMapping, filterRows, getFilterValues } from './csv-core.mjs';
+
     let currentData = [];
     let currentColumns = [];
     let currentFileId = null;
@@ -168,29 +170,6 @@
     }
 
     renderHistoryList();
-
-    // === 智能列猜测 ===
-    function guessMapping(columns) {
-        const lower = columns.map(c => c.toLowerCase());
-        const find = (keywords) => {
-            for (const kw of keywords) {
-                const idx = lower.findIndex(c => c.includes(kw));
-                if (idx !== -1) return columns[idx];
-            }
-            return '';
-        };
-
-        // Notion 导出的 Name / 名称 通常是第一列
-        let titleCol = find(['name', '名称', '标题', 'title']);
-        if (!titleCol && columns.length > 0) titleCol = columns[0];
-
-        let dateCol = find(['created', '创建', 'date', '日期', '时间', 'time', 'updated', '修改']);
-        let tagCol = find(['tag', '标签', '领域', 'category', '分类', 'type', '类型', 'domain', '用途']);
-        let linkCol = find(['url', 'link', '链接', '网址', 'href']);
-        let filterCol = tagCol; // 默认用标签列做筛选
-
-        return { title: titleCol, date: dateCol, tag: tagCol, link: linkCol, filter: filterCol };
-    }
 
     function buildSelectOptions(selectEl, columns, selectedValue, includeNone) {
         selectEl.innerHTML = '';
@@ -237,20 +216,13 @@
         const mapping = getMapping();
         const filterSelect = document.getElementById('filterSelect');
         filterSelect.innerHTML = '<option value="">全部</option>';
-        if (mapping.filter) {
-            const values = [...new Set(currentData.flatMap(row => {
-                const val = row[mapping.filter];
-                if (!val) return [];
-                // Notion 多选导出为逗号分隔
-                return val.split(',').map(v => v.trim()).filter(Boolean);
-            }))].sort();
-            values.forEach(v => {
-                const opt = document.createElement('option');
-                opt.value = v;
-                opt.textContent = v;
-                filterSelect.appendChild(opt);
-            });
-        }
+        const values = getFilterValues(currentData, mapping.filter);
+        values.forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v;
+            opt.textContent = v;
+            filterSelect.appendChild(opt);
+        });
     }
 
     // === 文件管理 ===
@@ -268,17 +240,22 @@
         Object.keys(allHistory).sort((a,b) => b.split('_')[1] - a.split('_')[1]).forEach(id => {
             const item = document.createElement('div');
             item.className = 'history-item' + (id === currentFileId ? ' active' : '');
-            item.innerHTML = `
-                <span style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:160px;" title="${allHistory[id].name}">📄 ${allHistory[id].name}</span>
-                <span class="delete-btn" onclick="deleteFile(event, '${id}')">✕</span>
-            `;
+            const nameSpan = document.createElement('span');
+            nameSpan.style.cssText = 'overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:160px;';
+            nameSpan.title = allHistory[id].name;
+            nameSpan.textContent = '📄 ' + allHistory[id].name;
+            const deleteBtn = document.createElement('span');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.textContent = '✕';
+            deleteBtn.onclick = (e) => { e.stopPropagation(); deleteFile(id); };
+            item.appendChild(nameSpan);
+            item.appendChild(deleteBtn);
             item.onclick = (e) => { if (!e.target.classList.contains('delete-btn')) loadFile(id); };
             list.appendChild(item);
         });
     }
 
-    function deleteFile(e, id) {
-        e.stopPropagation();
+    function deleteFile(id) {
         if (confirm('确定删除该历史记录吗？')) {
             delete allHistory[id];
             saveToLocal();
@@ -355,32 +332,14 @@
 
     function renderGallery() {
         const mapping = getMapping();
-        const search = document.getElementById('searchInput').value.toLowerCase();
-        const filterVal = document.getElementById('filterSelect').value;
-        const sort = document.getElementById('sortOrder').value;
 
-        let filtered = currentData.filter(row => {
-            // 全字段搜索
-            const allText = Object.values(row).join(' ').toLowerCase();
-            if (search && !allText.includes(search)) return false;
-
-            // 筛选
-            if (filterVal && mapping.filter) {
-                const cellVal = (row[mapping.filter] || '');
-                const cellParts = cellVal.split(',').map(v => v.trim());
-                if (!cellParts.includes(filterVal)) return false;
-            }
-            return true;
+        const filtered = filterRows(currentData, {
+            search: document.getElementById('searchInput').value.toLowerCase(),
+            filterValue: document.getElementById('filterSelect').value,
+            filterColumn: mapping.filter,
+            dateColumn: mapping.date,
+            sort: document.getElementById('sortOrder').value,
         });
-
-        // 排序
-        if (mapping.date) {
-            filtered.sort((a, b) => {
-                const tA = new Date(a[mapping.date] || 0);
-                const tB = new Date(b[mapping.date] || 0);
-                return sort === 'desc' ? tB - tA : tA - tB;
-            });
-        }
 
         document.getElementById('recordCount').innerText = `显示 ${filtered.length} / ${currentData.length} 条 · ${currentColumns.length} 列`;
 
@@ -428,40 +387,53 @@
                     ${date ? `<div class="card-meta">${escapeHtml(date)}</div>` : ''}
                     ${tagsHtml ? `<div class="card-tags">${tagsHtml}</div>` : ''}
                     ${fieldsHtml}
-                    ${link ? `<a class="card-link" href="${escapeHtml(link)}" target="_blank">查看链接 ↗</a>` : ''}
+                    ${link && isSafeLink(link) ? `<a class="card-link" href="${escapeHtml(link)}" target="_blank">查看链接 ↗</a>` : ''}
                 </div>
             `;
         }).join('');
     }
 
     function escapeHtml(str) {
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    /** 仅允许 http/https/mailto/tel 协议或相对路径，防止 javascript: 等注入 */
+    function isSafeLink(url) {
+        const u = String(url).trim();
+        if (!u) return false;
+        if (/^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(u)) {
+            return /^(https?|mailto|tel):/i.test(u);
+        }
+        return true; // 相对路径 / 锚点 / 纯文本
     }
 
     function exportCurrentView() {
         const mapping = getMapping();
-        const search = document.getElementById('searchInput').value.toLowerCase();
-        const filterVal = document.getElementById('filterSelect').value;
 
-        let filtered = currentData.filter(row => {
-            const allText = Object.values(row).join(' ').toLowerCase();
-            if (search && !allText.includes(search)) return false;
-            if (filterVal && mapping.filter) {
-                const cellParts = (row[mapping.filter] || '').split(',').map(v => v.trim());
-                if (!cellParts.includes(filterVal)) return false;
-            }
-            return true;
+        const filtered = filterRows(currentData, {
+            search: document.getElementById('searchInput').value.toLowerCase(),
+            filterValue: document.getElementById('filterSelect').value,
+            filterColumn: mapping.filter,
         });
 
         const csv = Papa.unparse(filtered);
-        const blob = new Blob(['\\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+        const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
         a.download = 'filtered_export.csv';
         a.click();
     }
+
+    // 内联事件处理器（onclick/onchange）按全局查找函数，module 作用域需显式导出
+    window.toggleMapping = toggleMapping;
+    window.exportCurrentView = exportCurrentView;
+    window.saveMappingAndRender = saveMappingAndRender;
+    window.updateFilterOptions = updateFilterOptions;
 </script>
 </body>
 </html>

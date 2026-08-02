@@ -186,7 +186,9 @@
         <a href="index.html" class="secondary-btn">← 返回工具集</a>
     </div>
 
-    <script>
+    <script type="module">
+        import { parseASS } from './subtitle-extractor.mjs';
+
         const dropZone = document.getElementById('drop-zone');
         const fileInput = document.getElementById('file-input');
         const wrapper = document.getElementById('subtitle-wrapper');
@@ -221,29 +223,6 @@
             } else {
                 alert('请上传有效的 .ass 文件');
             }
-        }
-
-        function parseASS(content) {
-            const subtitles = [];
-            const lines = content.split('\n');
-            let isEvents = false;
-
-            lines.forEach(line => {
-                if (line.startsWith('[Events]')) {
-                    isEvents = true;
-                    return;
-                }
-                if (isEvents && line.startsWith('Dialogue:')) {
-                    const parts = line.split(',');
-                    if (parts.length >= 10) {
-                        // 提取对话文本并过滤 ASS 标签（如 {\pos...}）
-                        let text = parts.slice(9).join(',').trim();
-                        text = text.replace(/\{.*?\}/g, '').replace(/\\N/g, '\n');
-                        if (text) subtitles.push(text);
-                    }
-                }
-            });
-            return subtitles;
         }
 
         function displaySubtitles(subtitles, fileName) {
