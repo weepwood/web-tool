@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ASS Subtitle Pro - 高级字幕提取器</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <style>
         :root {
             --primary-color: #2383e2; /* Notion 蓝 */
@@ -17,7 +17,7 @@
         }
 
         body {
-            font-family: 'Inter', -apple-system, system-ui, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
             background-color: var(--bg-color);
             color: var(--text-main);
             margin: 0;
@@ -50,7 +50,7 @@
             max-width: 900px;
             background: var(--card-bg);
             border-radius: 12px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1), 0 10px 20px rgba(0,0,0,0.05);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             padding: 32px;
             box-sizing: border-box;
         }
@@ -151,6 +151,24 @@
 
         .animate-in { animation: slideIn 0.4s ease forwards; }
 
+        /* 暗色模式 */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg-color: #191919;
+                --card-bg: #222222;
+                --text-main: #e8e6e3;
+                --text-muted: #a09e98;
+                --border-color: #333333;
+                --success-color: #4fd08c;
+                --primary-color: #4ea1ff;
+            }
+            .upload-area { background: #1f1f1f; }
+            .upload-area:hover, .upload-area.dragover { background: #12263d; }
+            #subtitle-container { background: #1b1b1b; }
+            .secondary-btn { background: #222222; }
+            .secondary-btn:hover { background: #2a2a2a; }
+        }
+
     </style>
 </head>
 <body>
@@ -164,7 +182,7 @@
         <div class="upload-area" id="drop-zone" onclick="document.getElementById('file-input').click()">
             <span class="upload-icon">📄</span>
             <p>点击或拖拽 .ass 文件至此处</p>
-            <span style="font-size: 12px; color: #a1a1a1;">支持解析对话行并自动去重</span>
+            <span style="font-size: 12px; color: var(--text-muted);">支持解析对话行并自动去重</span>
             <input type="file" id="file-input" accept=".ass">
         </div>
 

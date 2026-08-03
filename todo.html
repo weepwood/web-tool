@@ -4,14 +4,31 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ZenTask - 极简待办管理</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        indigo: {
+                            100: '#d9e9ff',
+                            300: '#9dc5f5',
+                            500: '#2383e2',
+                            600: '#1a6fc4',
+                            700: '#165ea8',
+                            900: '#16304a',
+                        }
+                    }
+                }
+            }
+        };
+    </script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@300;400;500;700&display=swap');
-        
         body {
-            font-family: 'Noto+Sans+SC', sans-serif;
-            background-color: #f8fafc;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", sans-serif;
+            background-color: #ffffff;
         }
         .task-card {
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -297,5 +314,33 @@
             updateStats();
         }
     </script>
+
+    <style>
+        @media (prefers-color-scheme: dark) {
+            body { background-color: #191919; color: #e8e6e3; }
+            .bg-white { background-color: #222222; }
+            .text-slate-900 { color: #f0efec; }
+            .text-slate-800 { color: #e8e6e3; }
+            .text-slate-600 { color: #b8b6b0; }
+            .text-slate-500 { color: #a09e98; }
+            .text-slate-400 { color: #8b8982; }
+            .text-slate-300 { color: #6f6d66; }
+            .border-slate-100 { border-color: #2a2a2a; }
+            .border-slate-200 { border-color: #333333; }
+            .bg-slate-200 { background-color: #333333; }
+            .bg-blue-50 { background-color: #12263d; }
+            .text-blue-600 { color: #6ab3f7; }
+            .bg-green-50 { background-color: #0f2a1c; }
+            .text-green-600 { color: #4fd08c; }
+            .bg-orange-50 { background-color: #2a1c0f; }
+            .text-orange-600 { color: #f5a95c; }
+            .text-red-500 { color: #f87171; }
+            .text-orange-500 { color: #fb923c; }
+            .text-emerald-500 { color: #34d399; }
+            #task-input { background-color: #222222; color: #e8e6e3; }
+            .custom-scrollbar::-webkit-scrollbar-track { background: #1f1f1f; }
+            .custom-scrollbar::-webkit-scrollbar-thumb { background: #3a3a3a; }
+        }
+    </style>
 </body>
 </html>

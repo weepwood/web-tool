@@ -51,3 +51,8 @@ node --test
 - 有可测试的纯逻辑：抽取为 `.mjs` 模块（参考 `snake-game.mjs`），页面用 `<script type="module">` 引入，并配套 `*.test.mjs`（`node:test`）。
 - 用户数据渲染进 DOM 时一律转义（参考各页面 `escapeHtml`），禁止直接拼 `innerHTML`。
 - 引用外部 CDN 时锁定具体版本号。
+- 设计统一（Notion 风）：
+  - 主色 `#2383e2`（暗色 `#4ea1ff`），文字 `#37352f`（暗色 `#e8e6e3`），背景白/`#191919`；
+  - 字体统一系统栈（`-apple-system, BlinkMacSystemFont, "Segoe UI", ...`），不引入外部字体；
+  - 全部页面通过 `prefers-color-scheme` 支持暗色模式；
+  - 图标使用 Phosphor 内联 SVG（参考 `index.html` 的 `ICON` 常量），不手绘、不用 emoji 代替图标体系。

@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Notion CSV 浏览器</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js"></script>
     <style>
         :root {
@@ -13,6 +14,7 @@
             --notion-text: #37352f;
             --notion-border: rgba(15, 15, 15, 0.1);
             --accent-blue: #2383e2;
+            --muted: #999999;
         }
         * { box-sizing: border-box; }
         body {
@@ -56,15 +58,15 @@
         }
         .card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.06); }
         .card-title { font-weight: 600; margin-bottom: 6px; font-size: 16px; line-height: 1.4; }
-        .card-meta { font-size: 12px; color: #999; margin-bottom: 10px; }
+        .card-meta { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
         .card-tags { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 10px; }
-        .tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #f0f0ef; white-space: nowrap; }
+        .tag { font-size: 11px; padding: 2px 8px; border-radius: 4px; background: #f0f0ef; color: var(--notion-text); white-space: nowrap; }
         .tag-select { background: #e7f3ff; color: #0b67c2; }
-        .tag-multi { background: #f3e8ff; color: #6b21a8; }
-        .tag-checkbox-true { background: #d1fae5; color: #065f46; }
-        .tag-checkbox-false { background: #fee2e2; color: #991b1b; }
+        .tag-multi { background: #f0f0ef; color: var(--notion-text); }
+        .tag-checkbox-true { background: #e6f4ea; color: #1e7a46; }
+        .tag-checkbox-false { background: #fce8e6; color: #c5221f; }
         .card-field { font-size: 13px; color: #555; line-height: 1.6; margin-bottom: 4px; }
-        .card-field-label { color: #999; font-size: 12px; }
+        .card-field-label { color: var(--muted); font-size: 12px; }
         .card-link { margin-top: auto; padding-top: 12px; font-size: 12px; color: var(--accent-blue); text-decoration: none; }
         .card-link:hover { text-decoration: underline; }
 
@@ -74,16 +76,47 @@
         .search-box { flex: 1; min-width: 180px; padding: 6px 12px; border-radius: 5px; border: 1px solid var(--notion-border); outline: none; font-size: 13px; }
         .search-box:focus { border-color: var(--accent-blue); box-shadow: 0 0 0 2px rgba(35, 131, 226, 0.15); }
         input[type="file"] { display: none; }
-        .empty-view { text-align: center; margin-top: 100px; color: #999; }
+        .empty-view { text-align: center; margin-top: 100px; color: var(--muted); }
         .field-config { background: #fafafa; border: 1px solid var(--notion-border); border-radius: 8px; padding: 16px; margin-top: 12px; }
         .field-config label { font-size: 13px; display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
         .field-config select { font-size: 13px; padding: 4px 8px; border-radius: 4px; border: 1px solid var(--notion-border); }
-        .count-badge { font-size: 12px; color: #999; margin-left: 8px; }
+        .count-badge { font-size: 12px; color: var(--muted); margin-left: 8px; }
 
         /* 列映射面板 */
         .mapping-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; flex-wrap: wrap; }
         .mapping-row label { min-width: 80px; font-size: 13px; color: #666; }
         .mapping-row select { flex: 1; min-width: 120px; }
+
+        /* 暗色模式 */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --notion-bg: #191919;
+                --sidebar-bg: #1f1f1f;
+                --notion-text: #e8e6e3;
+                --notion-border: rgba(255, 255, 255, 0.12);
+                --accent-blue: #4ea1ff;
+                --muted: #8b8982;
+            }
+            .sidebar-title { color: rgba(232, 230, 227, 0.5); }
+            .history-item:hover { background: rgba(255, 255, 255, 0.06); }
+            .history-item.active { background: rgba(255, 255, 255, 0.1); }
+            .delete-btn { color: #ff8f8f; }
+            .delete-btn:hover { background: rgba(255, 100, 100, 0.15); }
+            .top-bar { background: #1d1d1d; }
+            .card { background: #222222; }
+            .card:hover { box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); }
+            .card-field { color: #b8b6b0; }
+            .btn { background: #222222; }
+            .btn-primary { background: #e8e6e3; color: #1a1a1a; }
+            .search-box { background: #222222; color: var(--notion-text); }
+            .field-config { background: #1f1f1f; }
+            .mapping-row label { color: #a09e98; }
+            .tag { background: #2a2a2a; }
+            .tag-select { background: #12263d; color: #6ab3f7; }
+            .tag-checkbox-true { background: #0f2a1c; color: #4fd08c; }
+            .tag-checkbox-false { background: #2a1515; color: #ff8f8f; }
+            input, select { background-color: #222222; color: var(--notion-text); }
+        }
     </style>
 </head>
 <body>
@@ -149,7 +182,7 @@
             <div class="empty-view">
                 <h3>👋 欢迎使用</h3>
                 <p>导入任意 Notion 导出的 CSV 文件即可浏览</p>
-                <p style="font-size: 13px; color: #bbb;">自动识别列结构，支持搜索、筛选、排序</p>
+                <p style="font-size: 13px; color: var(--muted);">自动识别列结构，支持搜索、筛选、排序</p>
             </div>
         </div>
     </div>
@@ -378,7 +411,7 @@
             }).join('');
 
             if (otherFields.length > 5) {
-                fieldsHtml += `<div class="card-field" style="color:#bbb; font-size:12px;">还有 ${otherFields.length - 5} 个字段...</div>`;
+                fieldsHtml += `<div class="card-field" style="color:var(--muted); font-size:12px;">还有 ${otherFields.length - 5} 个字段...</div>`;
             }
 
             return `
