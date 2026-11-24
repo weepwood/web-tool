@@ -7,6 +7,7 @@
 | 文件 | 说明 |
 |---|---|
 | `index.html` | 工具集门户首页 |
+| `converter.html` + `convert-core.mjs` | URL 组件编解码与 UTC 时间戳转换（需 HTTP 访问） |
 | `json-formatter.html` + `json-core.mjs` | 本地 JSON 格式化、压缩与校验（JavaScript 数字精度，非无损转换） |
 | `subtitle-converter.html` | ASS 字幕文本提取，用于后续 AI 处理 |
 | `notion-csv-parser.html` | Notion 导出 CSV 解析、浏览、搜索、筛选、导出 |
