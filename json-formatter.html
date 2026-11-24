@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>JSON 格式化 · Tools</title><link rel="icon" href="favicon.svg">
+<style>
+:root{color-scheme:light dark;--bg:#fff;--text:#37352f;--muted:#787774;--line:#e3e2df;--panel:#f7f7f5;--blue:#2383e2}
+@media(prefers-color-scheme:dark){:root{--bg:#191919;--text:#e8e6e3;--muted:#a3a3a3;--line:#393939;--panel:#222;--blue:#4ea1ff}}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}main{max-width:1200px;margin:auto;padding:40px 24px}a{color:var(--blue);text-decoration:none}h1{font-size:30px;margin:20px 0 4px}p{color:var(--muted)}.bar{display:flex;gap:8px;flex-wrap:wrap;margin:24px 0 16px}button{font:inherit;color:inherit;border:1px solid var(--line);background:var(--panel);padding:8px 14px;border-radius:7px;cursor:pointer}button.primary{background:#2383e2;color:white;border-color:#2383e2}button:disabled{opacity:.5;cursor:default}button:focus-visible,textarea:focus-visible{outline:2px solid var(--blue);outline-offset:2px}.editors{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}label{display:block;font-weight:600;margin-bottom:8px}textarea{display:block;width:100%;min-height:360px;resize:vertical;border:1px solid var(--line);border-radius:9px;padding:14px;background:var(--panel);color:var(--text);font:13px/1.6 ui-monospace,Menlo,Consolas,monospace}#status{min-height:24px;overflow-wrap:anywhere}@media(max-width:720px){main{padding:24px 16px}.editors{grid-template-columns:1fr}textarea{min-height:220px}}
+</style></head><body><main><a href="index.html">← 返回工具集</a><h1>JSON 格式化</h1><p>在浏览器本地解析、格式化与压缩 JSON，不上传输入。使用 JavaScript 数字精度，超长整数可能失真；重复键会被合并，不适用于要求原文无损转换的场景。</p>
+<div class="bar"><button class="primary" id="pretty">格式化</button><button id="compact">压缩</button><button id="example">示例</button><button id="clear">清空</button><button id="copy" disabled>复制结果</button></div>
+<div class="editors"><div><label for="source">输入</label><textarea id="source" spellcheck="false" placeholder="粘贴 JSON…"></textarea></div><div><label for="output">结果</label><textarea id="output" readonly spellcheck="false"></textarea></div></div><p id="status" role="status" aria-live="polite">等待输入</p></main>
+<script type="module">
+import { formatJson } from "./json-core.mjs";
+const $ = id => document.getElementById(id);
+const source = $("source"), output = $("output"), status = $("status"), copy = $("copy");
+function invalidate(){output.value="";copy.disabled=true;status.textContent="等待处理";}
+function run(mode){try{output.value=formatJson(source.value,mode);copy.disabled=false;status.textContent="有效 JSON · "+output.value.length+" 个字符";}catch(error){output.value="";copy.disabled=true;status.textContent="解析失败："+error.message;}}
+source.addEventListener("input",invalidate);
+$("pretty").onclick=()=>run("pretty");$("compact").onclick=()=>run("compact");
+$("example").onclick=()=>{source.value='{"name":"Tools","local":true,"items":[1,2,3]}';run("pretty");};
+$("clear").onclick=()=>{source.value="";invalidate();source.focus();};
+copy.onclick=async()=>{try{await navigator.clipboard.writeText(output.value);status.textContent="已复制";}catch{output.focus();output.select();status.textContent="无法自动复制，请手动复制选中的文本。";}};
+</script></body></html>

@@ -7,6 +7,7 @@
 | 文件 | 说明 |
 |---|---|
 | `index.html` | 工具集门户首页 |
+| `json-formatter.html` + `json-core.mjs` | 本地 JSON 格式化、压缩与校验（JavaScript 数字精度，非无损转换） |
 | `subtitle-converter.html` | ASS 字幕文本提取，用于后续 AI 处理 |
 | `notion-csv-parser.html` | Notion 导出 CSV 解析、浏览、搜索、筛选、导出 |
 | `todo.html` | 极简待办管理（ZenTask），localStorage 持久化 |
@@ -31,7 +32,7 @@ python3 -m http.server 8000
 npx serve .
 ```
 
-> 说明：`snake.html` 通过 `<script type="module">` 导入 `snake-game.mjs`，必须通过 HTTP 访问才能运行；其余纯单文件页面双击可直接打开。
+> 说明：`snake.html` 通过 `<script type="module">` 导入 `snake-game.mjs`，必须通过 HTTP 访问才能运行；JSON 格式化也使用 ES Module；其他页面请按各自依赖情况选择 HTTP 访问。
 
 ## 测试
 
